@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import {
   sendVerificationCode,
    sendWelcomeBackEmail,
+  sendResendOtpEmail
 } from "../services/emailService.js";
 import { generateToken } from "../utils/generateToken.js";
 
@@ -123,7 +124,7 @@ export const resendOtp = async (req, res) => {
       { expiresIn: "10m" }
     );
 
-    await sendVerificationCode(decoded.email, newOtp);
+    await sendResendOtpEmail(decoded.email, newOtp);
 
     res.json({
       success: true,
