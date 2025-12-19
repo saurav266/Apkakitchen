@@ -1,6 +1,42 @@
 import mongoose from "mongoose";
 // import { forgetPassword } from "../controllers/UserController";
 
+const addressSchema = new mongoose.Schema(
+  {
+    label: {
+      type: String,
+      enum: ["Home", "Work", "Other"],
+      default: "Home"
+    },
+
+    addressLine: {
+      type: String,
+      required: true
+    },
+
+    city: {
+      type: String,
+      required: true
+    },
+
+    state: {
+      type: String,
+      required: true
+    },
+
+    pincode: {
+      type: String,
+      required: true
+    },
+
+    isCurrent: {
+      type: Boolean,
+      default: false
+    }
+  },
+  { _id: true }
+);
+
 const userSchema = new mongoose.Schema({
     name: {
         type: String,   
@@ -45,7 +81,12 @@ const userSchema = new mongoose.Schema({
         type: Date,
        
     },
-
+    role: {
+        type: String,
+        enum: ['user', 'admin', 'delivery'],
+        default: 'user'
+    },
+    addresses: [addressSchema],
 
     forgetPasswordToken: String,
     forgetPasswordExpiry: Date,
