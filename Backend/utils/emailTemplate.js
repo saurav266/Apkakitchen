@@ -293,3 +293,90 @@ ${trackingPixel(trackId)}
 </body>
 </html>
 `;
+
+export const ForgotPassword_Email_Template = ({
+  name,
+  resetUrl,
+  trackId,
+}) => `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+@media (prefers-color-scheme: dark) {
+  body { background:#121212 !important; color:#fff !important; }
+}
+</style>
+</head>
+
+<body style="margin:0;padding:0;background:#f2f4f6;font-family:Segoe UI,Arial;">
+<table width="100%">
+<tr>
+<td align="center" style="padding:25px">
+
+<table width="600"
+style="background:#ffffff;border-radius:12px;
+box-shadow:0 8px 25px rgba(0,0,0,.08);">
+
+<tr>
+<td style="background:linear-gradient(135deg,#d32f2f,#b71c1c);
+padding:28px;text-align:center;color:#fff">
+<h2>Password Reset Request</h2>
+</td>
+</tr>
+
+<tr>
+<td style="padding:30px;font-size:15px">
+<p>Hello <strong>${name}</strong>,</p>
+
+<p>
+We received a request to reset your <strong>ApkaKitchen</strong> password.
+Click the button below to continue.
+</p>
+
+<div style="text-align:center;margin:30px 0;">
+<a href="${resetUrl}"
+style="
+background:#d32f2f;
+color:#ffffff;
+padding:12px 28px;
+border-radius:6px;
+text-decoration:none;
+font-weight:bold;">
+Reset Password
+</a>
+</div>
+
+<p style="font-size:13px;color:#555;">
+⏱ This link is valid for <strong>15 minutes</strong>.
+</p>
+
+<div style="
+background:#fdecea;
+border-left:4px solid #d32f2f;
+padding:12px;font-size:13px;">
+⚠ If you didn’t request this, please ignore this email.
+</div>
+</td>
+</tr>
+
+<tr>
+<td style="background:#f7f9fb;padding:15px;
+text-align:center;font-size:12px;color:#888">
+© ${new Date().getFullYear()} ApkaKitchen • Secure Account Recovery
+</td>
+</tr>
+
+</table>
+
+<img src="${process.env.APP_URL}/email/open/${trackId}" width="1" height="1" style="display:none;" />
+
+</td>
+</tr>
+</table>
+</body>
+</html>
+`;
+
