@@ -12,9 +12,10 @@ export const sendVerificationCode = async (email, otp) => {
     from: `"ApkaKitchen" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: "Email Verification OTP",
-    html: Verification_Email_Template(otp),
+    html: Verification_Email_Template({ otp }), // ✅ FIXED
   });
 };
+
 
 export const sendWelcomeBackEmail = async (email, name) => {
   await transporter.sendMail({

@@ -54,9 +54,6 @@ const deliveryBoySchema = new mongoose.Schema(
       type: String,
       select: false
     },
-
-    
-
     // ================= VERIFICATION =================
     isVerified: {
       type: Boolean,
