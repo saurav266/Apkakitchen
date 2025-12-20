@@ -54,46 +54,82 @@ export const registerUser = async (req, res) => {
 };
 
 /* VERIFY OTP */
+/* VERIFY OTP + AUTO LOGIN */
 export const verifyOtpAndRegister = async (req, res) => {
   try {
     const { otp, otpToken } = req.body;
 
     if (!otp || !otpToken) {
-      return res.status(400).json({ message: "OTP and token required" });
+      return res.status(400).json({
+        success: false,
+        message: "OTP and token required"
+      });
     }
 
-    // 🔐 Verify token
+    // 🔐 Verify OTP token
     const decoded = jwt.verify(otpToken, process.env.JWT_SECRET);
 
     if (decoded.otp !== otp) {
-      return res.status(400).json({ message: "Invalid OTP" });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid OTP"
+      });
     }
 
-    // Final safety check
+    // Safety check
     const exists = await User.findOne({ email: decoded.email });
     if (exists) {
-      return res.status(400).json({ message: "User already exists" });
+      return res.status(400).json({
+        success: false,
+        message: "User already exists"
+      });
     }
 
-    // ✅ Create user AFTER OTP success
-    await User.create({
+    // ✅ Create user
+    const user = await User.create({
       name: decoded.name,
       email: decoded.email,
       password: decoded.password,
       verified: true,
+      role: "user"
     });
 
-    res.status(201).json({
-      success: true,
-      message: "Registration successful",
-    });
+    // 🔥 AUTO LOGIN (JWT)
+   const token = generateToken(user._id, user.role);
+
+res.cookie("token", token, {
+  httpOnly: true,
+  secure: false,           // ✅ MUST be false on localhost
+  sameSite: "lax",         // ✅ REQUIRED
+  maxAge: 7 * 24 * 60 * 60 * 1000
+});
+
+return res.status(201).json({
+  success: true,
+  message: "Registration successful. Logged in automatically",
+  user: {
+    id: user._id,
+    name: user.name,
+    email: user.email
+  }
+});
+
+
   } catch (err) {
     if (err.name === "TokenExpiredError") {
-      return res.status(400).json({ message: "OTP expired" });
+      return res.status(400).json({
+        success: false,
+        message: "OTP expired"
+      });
     }
-    res.status(500).json({ message: err.message });
+
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
   }
 };
+
 
 export const resendOtp = async (req, res) => {
   try {
@@ -173,12 +209,14 @@ export const loginUser = async (req, res) => {
     await  sendWelcomeBackEmail(user.email, user.name);
 
     // ✅ STORE JWT IN COOKIE (7 DAYS)
-    res.cookie("token", token, {
+   res.cookie("token", token, {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production", // false on localhost
-  sameSite: "lax",   // ✅ FIX
+  secure: false,        // localhost
+  sameSite: "lax",
+  path: "/",            // 🔥 REQUIRED
   maxAge: 7 * 24 * 60 * 60 * 1000,
 });
+
 
 
     res.status(200).json({
@@ -197,16 +235,20 @@ export const loginUser = async (req, res) => {
 
 
 export const logoutUser = (req, res) => {
-  res.cookie("token", "", {
+  res.clearCookie("token", {
     httpOnly: true,
-    expires: new Date(0),
+    secure: false,
+    sameSite: "lax",
+    path: "/",     // 🔥 MUST MATCH LOGIN
   });
 
-  res.json({
+  return res.status(200).json({
     success: true,
     message: "Logged out successfully",
   });
 };
+
+
 
 
 export const forgotPassword = async (req, res) => {

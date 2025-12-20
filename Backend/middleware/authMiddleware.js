@@ -12,52 +12,28 @@ import { loginDeliveryBoy } from "../controller/deliveryBoyController.js";
  */
 export const protect = async (req, res, next) => {
   try {
-    let token;
-
-    // ✅ Get token from cookie OR Authorization header
-    if (req.cookies?.token) {
-      token = req.cookies.token;
-    } else if (
-      req.headers.authorization &&
-      req.headers.authorization.startsWith("Bearer")
-    ) {
-      token = req.headers.authorization.split(" ")[1];
-    }
+    const token = req.cookies?.token;
 
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: "Not authorized, token missing"
+        message: "Not authorized"
       });
     }
-    console.log("COOKIES 👉", req.cookies);
-console.log("TOKEN 👉", token);
 
-
-    // ✅ Verify JWT
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    let user = null;
-
-    // ✅ Load user based on role
-    if (decoded.role === "admin") {
-      user = await Admin.findById(decoded.id).select("-password");
-    } 
-    else if (decoded.role === "user") {
-      user = await User.findById(decoded.id).select("-password");
-    } 
-    else if (decoded.role === "delivery") {
-      user = await DeliveryBoy.findById(decoded.id).select("-password");
+    let user;
+    if (decoded.role === "user") {
+      user = await User.findById(decoded.id);
+    } else if (decoded.role === "admin") {
+      user = await Admin.findById(decoded.id);
     }
 
     if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: "User not found"
-      });
+      return res.status(401).json({ message: "User not found" });
     }
 
-    // ✅ Attach user to request
     req.user = {
       id: user._id,
       role: decoded.role,
@@ -65,14 +41,14 @@ console.log("TOKEN 👉", token);
     };
 
     next();
-
-  } catch (error) {
+  } catch {
     return res.status(401).json({
       success: false,
-      message: "Session expired or invalid token"
+      message: "Session expired"
     });
   }
 };
+
 
 
 /**

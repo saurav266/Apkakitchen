@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import Admin from "../model/adminSchema.js";
 import 'dotenv/config';
-import Order from "../models/Order.js";
+import Order from "../model/orderSchema.js";
 import jwt from "jsonwebtoken";
 const DATABASE_URL = "mongodb://127.0.0.1:27017/Apkakitchen"
 // const createAdmin = async () => {
@@ -40,49 +40,69 @@ const DATABASE_URL = "mongodb://127.0.0.1:27017/Apkakitchen"
 
 export const loginAdmin = async (req, res) => {
   try {
-    const { email, password } = req.body;   
+    const { email, password } = req.body;
+
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: "Email and password are required"
+        message: "Email and password are required",
       });
-    }   
+    }
+
     const admin = await Admin.findOne({ email }).select("+password");
+
     if (!admin) {
       return res.status(401).json({
         success: false,
-        message: "Invalid email or password"
+        message: "Invalid email or password",
       });
     }
+
     const isMatch = await bcrypt.compare(password, admin.password);
     if (!isMatch) {
-        return res.status(401).json({
-            success: false,
-            message: "Invalid email or password"
-        });
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
     }
+
+    // 🔐 CREATE JWT
     const token = jwt.sign(
       {
         id: admin._id,
-        role: admin.role
-        },  
-        process.env.JWT_SECRET,
-        { expiresIn: "7d" }
+        role: admin.role,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
     );
+
+    // ✅ STORE TOKEN IN COOKIE (CRITICAL)
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: false,      // ❗ false on localhost
+      sameSite: "lax",    // ❗ REQUIRED
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
     res.status(200).json({
       success: true,
       message: "Admin logged in successfully",
-      token
+      user: {
+        id: admin._id,
+        name: admin.name,
+        email: admin.email,
+        role: admin.role,
+      },
     });
-  }
-    catch (error) {
+  } catch (error) {
     console.error("Error during admin login:", error);
     res.status(500).json({
-        success: false,
-        message: "Server error during admin login"
+      success: false,
+      message: "Server error during admin login",
     });
-    }
+  }
 };
+
 
 // 📦 GET TODAY'S ORDERS COUNT
 export const getTodayOrders = async (req, res) => {

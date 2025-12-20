@@ -1,5 +1,5 @@
 import express from "express";
-import { registerUser, verifyOtpAndRegister ,resetPassword,forgotPassword,getUserProfile} from "../controller/userController.js";
+import { resetPassword,forgotPassword,getUserProfile} from "../controller/userController.js";
 import { protect,authorizeRoles } from "../middleware/authMiddleware.js";
 import {addAddress,
   updateAddress,
@@ -8,8 +8,6 @@ import {addAddress,
 
 const router = express.Router();
 
-router.post("/register", registerUser);
-router.post("/verify-otp", verifyOtpAndRegister);
 
 
 router.post("/forgot-password", forgotPassword);
