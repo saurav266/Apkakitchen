@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import Admin from "../model/adminSchema.js";
 import 'dotenv/config';
-
+import Order from "../models/Order.js";
 import jwt from "jsonwebtoken";
 const DATABASE_URL = "mongodb://127.0.0.1:27017/Apkakitchen"
 // const createAdmin = async () => {
@@ -82,4 +82,30 @@ export const loginAdmin = async (req, res) => {
         message: "Server error during admin login"
     });
     }
+};
+
+// 📦 GET TODAY'S ORDERS COUNT
+export const getTodayOrders = async (req, res) => {
+  try {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+
+    const todayOrders = await Order.countDocuments({
+      createdAt: { $gte: start, $lte: end },
+    });
+
+    res.status(200).json({
+      success: true,
+      todayOrders
+    });
+  } catch (error) {
+    console.error("Error fetching today's orders:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch today's orders"
+    });
+  }
 };
