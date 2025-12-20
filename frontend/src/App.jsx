@@ -13,6 +13,9 @@ import Register from "./user-page/Register.jsx";
 // Admin Pages
 import AdminDashboard from "./Admin-pages/AdminDashboard.jsx";
 import AdminOrders from "./Admin-pages/AdminOrders.jsx";
+import AdminUsers from "./Admin-pages/AdminUsers.jsx";
+import AdminProducts from "./Admin-pages/AdminProduct.jsx";
+import AdminDelivery from "./Admin-pages/AdminDelivery.jsx";
 
 function App() {
   return (
@@ -30,6 +33,9 @@ function App() {
       <Route path="/admin" element={<AdminLayout />}>
         <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="orders" element={<AdminOrders />} />
+        <Route path="users" element={<AdminUsers />} />
+        <Route path="products" element={<AdminProducts />} />
+        <Route path="delivery" element={<AdminDelivery />} />
       </Route>
     </Routes>
   );
