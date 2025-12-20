@@ -30,6 +30,9 @@ export const protect = async (req, res, next) => {
         message: "Not authorized, token missing"
       });
     }
+    console.log("COOKIES 👉", req.cookies);
+console.log("TOKEN 👉", token);
+
 
     // ✅ Verify JWT
     const decoded = jwt.verify(token, process.env.JWT_SECRET);

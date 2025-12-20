@@ -1,4 +1,4 @@
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import User from "../model/userSchema.js";
 import jwt from "jsonwebtoken";
 import {
@@ -8,6 +8,8 @@ import {
   sendForgotPasswordEmail
 } from "../services/emailService.js";
 import { generateToken } from "../utils/generateToken.js";
+import crypto from "crypto";
+
 
 /* REGISTER */
 export const registerUser = async (req, res) => {
@@ -166,16 +168,18 @@ export const loginUser = async (req, res) => {
       return res.status(400).json({ message: "Invalid credential passs" });
     }
 
-    const token = generateToken(user._id);
+    const token = generateToken(user._id, user.role);
+
     await  sendWelcomeBackEmail(user.email, user.name);
 
     // ✅ STORE JWT IN COOKIE (7 DAYS)
     res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production", // false on localhost
+  sameSite: "lax",   // ✅ FIX
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+});
+
 
     res.status(200).json({
       success: true,
@@ -283,7 +287,8 @@ export const resetPassword = async (req, res) => {
     await user.save();
 
     // 🔐 AUTO LOGIN (7 DAYS)
-    const jwtToken = generateToken(user._id);
+    const jwtToken = generateToken(user._id, user.role);
+
 
     res.cookie("token", jwtToken, {
       httpOnly: true,
@@ -303,5 +308,281 @@ export const resetPassword = async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+};
+
+
+/**
+ * @desc    Get logged-in user profile
+ * @route   GET /api/user/profile
+ * @access  Private
+ */
+export const getUserProfile = async (req, res) => {
+  try {
+    if (!req.user || !req.user.data) {
+      return res.status(401).json({
+        success: false,
+        message: "Not authorized"
+      });
+    }
+
+    const user = req.user.data;
+
+    return res.status(200).json({
+      success: true,
+      message: "User profile fetched successfully",
+      data: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: req.user.role,
+        verified: user.verified,
+        addresses: user.addresses,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
+      }
+    });
+
+  } catch (error) {
+    console.error("Get User Profile Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
+  }
+};
+
+
+export const updateUserProfile = async (req, res) => {
+  try {
+    const { name, email } = req.body;
+
+    // ✅ user already attached by protect middleware
+    const user = req.user.data;
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    // 🔁 Email change check
+    if (email && email !== user.email) {
+      const emailExists = await User.findOne({ email });
+      if (emailExists) {
+        return res.status(400).json({
+          success: false,
+          message: "Email already in use"
+        });
+      }
+      user.email = email;
+    }
+
+    if (name) {
+      user.name = name;
+    }
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email
+      }
+    });
+
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+};
+
+
+// for addressing CORS issues with cookies
+
+
+/**
+ * ➕ Add new address
+ * POST /api/users/address
+ */
+export const addAddress = async (req, res) => {
+  try {
+    const user = req.user.data;
+    const { label, addressLine, city, state, pincode, isCurrent } = req.body;
+
+    if (!addressLine || !city || !state || !pincode) {
+      return res.status(400).json({
+        success: false,
+        message: "All address fields are required"
+      });
+    }
+
+    // 🔥 If new address is current → unset all previous
+    if (isCurrent) {
+      user.addresses = user.addresses.map(addr => ({
+        ...addr.toObject(),
+        isCurrent: false
+      }));
+    }
+
+    user.addresses.push({
+      label: label || "Home",
+      addressLine,
+      city,
+      state,
+      pincode,
+      isCurrent: !!isCurrent
+    });
+
+    // 🔥 FORCE SAVE
+    user.markModified("addresses");
+    await user.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Address added successfully",
+      addresses: user.addresses
+    });
+
+  } catch (error) {
+    console.error("Add Address Error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+
+
+/**
+ * ✏️ Update address
+ * PUT /api/users/address/:addressId
+ */
+export const updateAddress = async (req, res) => {
+  try {
+    const user = req.user.data;
+    const { addressId } = req.params;
+    const { label, addressLine, city, state, pincode, isCurrent } = req.body;
+
+    const address = user.addresses.id(addressId);
+
+    if (!address) {
+      return res.status(404).json({
+        success: false,
+        message: "Address not found"
+      });
+    }
+
+    // If making current → unset others
+    if (isCurrent) {
+      user.addresses.forEach(addr => (addr.isCurrent = false));
+    }
+
+    if (label) address.label = label;
+    if (addressLine) address.addressLine = addressLine;
+    if (city) address.city = city;
+    if (state) address.state = state;
+    if (pincode) address.pincode = pincode;
+    if (typeof isCurrent === "boolean") address.isCurrent = isCurrent;
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Address updated successfully",
+      addresses: user.addresses
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+
+/**
+ * ❌ Delete address
+ * DELETE /api/users/address/:addressId
+ */
+export const deleteAddress = async (req, res) => {
+  try {
+    const user = req.user.data;
+    const { addressId } = req.params;
+
+    const address = user.addresses.id(addressId);
+    if (!address) {
+      return res.status(404).json({
+        success: false,
+        message: "Address not found"
+      });
+    }
+
+    address.remove();
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Address deleted successfully",
+      addresses: user.addresses
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+
+/**
+ * ⭐ Set current address
+ * PATCH /api/users/address/:addressId/set-current
+ */
+export const setCurrentAddress = async (req, res) => {
+  try {
+    const user = req.user.data;
+    const { addressId } = req.params;
+
+    let found = false;
+
+    // 🔥 IMPORTANT FIX: replace entire array
+    user.addresses = user.addresses.map(addr => {
+      if (addr._id.toString() === addressId) {
+        found = true;
+        return { ...addr.toObject(), isCurrent: true };
+      }
+      return { ...addr.toObject(), isCurrent: false };
+    });
+
+    if (!found) {
+      return res.status(404).json({
+        success: false,
+        message: "Address not found"
+      });
+    }
+
+    user.markModified("addresses"); // 🔥 CRITICAL
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Current address updated",
+      addresses: user.addresses
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 };

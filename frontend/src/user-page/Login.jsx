@@ -9,13 +9,42 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [typing, setTyping] = useState(false);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const user = { email };
-    localStorage.setItem("user", JSON.stringify(user));
+ const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  try {
+    const res = await fetch(
+  "http://localhost:3000/api/auth/login",
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include", // cookie
+    body: JSON.stringify({ email, password }),
+  }
+);
+
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.message || "Login failed");
+      return;
+    }
+
+    // ✅ Save ONLY user info (NOT token)
+    localStorage.setItem("user", JSON.stringify(data.user));
+
+    // Notify navbar / app
     window.dispatchEvent(new Event("authChanged"));
+
     navigate("/");
-  };
+  } catch (err) {
+    alert("Server not reachable");
+  }
+};
+
 
   // 👉 trigger small pulse when typing
   useEffect(() => {

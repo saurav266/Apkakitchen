@@ -15,7 +15,13 @@ import UserRoute from './route/userRoute.js';
 import DeliveryBoyRoute from './route/deliveryBoyRoute.js';
 import AdminRoute from './route/adminRoute.js';
 import authRoute from './route/authRoute.js';
-app.use(cors());
+app.use(
+  cors({
+    origin: "http://localhost:5173", // ✅ EXACT frontend URL
+    credentials: true
+  })
+);
+
 app.use(express.json());    
 app.use(cookieParser());
 

@@ -3,11 +3,10 @@ import 'dotenv/config';
 
 
 console.log("JWT Secret:", process.env.JWT_SECRET); // Debugging line to check if JWT_SECRET is loaded
-export const generateToken = (userId) => {
+export const generateToken = (id, role) => {
   return jwt.sign(
-    { id: userId },
+    { id, role },
     process.env.JWT_SECRET,
-    { expiresIn: "7d" } // ✅ 7 days login
+    { expiresIn: "7d" }
   );
 };
-
