@@ -1,14 +1,16 @@
-import { useState } from 'react'
-
-import './index.css'
 import Navbar from './User-Components/Navbar.jsx'
-import Hero from './User-Components/HeroSection.jsx'
-function App() {
+import Home from './user-page/Home.jsx'
+import Menu from './user-page/Menu.jsx'
+import { Routes, Route } from 'react-router-dom'
 
+function App() {
   return (
     <>
-    <Navbar />
-    <Hero />
+      <Navbar />
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/menu" element={<Menu />} />
+      </Routes>
     </>
   )
 }
