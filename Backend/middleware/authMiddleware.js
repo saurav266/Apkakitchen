@@ -17,37 +17,47 @@ export const protect = async (req, res, next) => {
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: "Not authorized"
+        message: "Not authorized",
       });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     let user;
-    if (decoded.role === "user") {
-      user = await User.findById(decoded.id);
-    } else if (decoded.role === "admin") {
+
+    if (decoded.role === "admin") {
       user = await Admin.findById(decoded.id);
+    } 
+    else if (decoded.role === "user") {
+      user = await User.findById(decoded.id);
+    } 
+    else if (decoded.role === "delivery") {
+      user = await DeliveryBoy.findById(decoded.id);
     }
 
     if (!user) {
-      return res.status(401).json({ message: "User not found" });
+      return res.status(401).json({
+        success: false,
+        message: "User not found",
+      });
     }
 
     req.user = {
       id: user._id,
       role: decoded.role,
-      data: user
+      data: user,
     };
 
     next();
-  } catch {
+  } catch (error) {
     return res.status(401).json({
       success: false,
-      message: "Session expired"
+      message: "Session expired",
     });
   }
 };
+
+
 
 
 

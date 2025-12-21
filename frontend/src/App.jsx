@@ -17,6 +17,8 @@ import OrderPage from "./user-page/Order.jsx";
 import AdminDashboard from "./Admin-pages/AdminDashboard.jsx";
 import AdminOrders from "./Admin-pages/AdminOrders.jsx";
 import AdminDelivery from "./Admin-pages/AdminDelivery.jsx";
+import AdminUsers from "./Admin-pages/AdminUsers.jsx";
+import AdminDeliveryBoyDetails from "./Admin-pages/AdminDeliveryBoyDetails.jsx";
 
 
 // delivery
@@ -78,6 +80,9 @@ function App() {
         <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="orders" element={<AdminOrders />} />
         <Route path="delivery" element={<AdminDelivery />} />
+        <Route path="delivery/:id" element={<AdminDeliveryBoyDetails />} />
+        <Route path="users" element={<AdminUsers />} />
+        
       </Route>
 
       {/* ================= DELIVERY ROUTES ================= */}

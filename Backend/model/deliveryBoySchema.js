@@ -5,10 +5,34 @@ import bcrypt from "bcryptjs";
  * Delivery Boy Schema
  * Single Restaurant System
  * Role-Based Access Included
+ * 
  */
+
+const addressSchema = new mongoose.Schema(
+  {
+    addressLine: {
+      type: String,
+      required: true
+    },
+    city: {
+      type: String,
+      required: true
+    },
+    state: {
+      type: String,
+      required: true
+    },
+    pincode: {
+      type: String,
+      required: true
+    }
+  },
+  { _id: false }
+);
+
 const deliveryBoySchema = new mongoose.Schema(
   {
-    // ================= BASIC PROFILE =================
+    /* ================= BASIC PROFILE ================= */
     name: {
       type: String,
       required: true,
@@ -27,14 +51,14 @@ const deliveryBoySchema = new mongoose.Schema(
       sparse: true
     },
 
-    // ================= ROLE (RBAC) =================
+    /* ================= ROLE ================= */
     role: {
       type: String,
       enum: ["delivery"],
       default: "delivery"
     },
 
-    // ================= LOGIN CREDENTIAL =================
+    /* ================= LOGIN ================= */
     password: {
       type: String,
       required: true,
@@ -42,48 +66,59 @@ const deliveryBoySchema = new mongoose.Schema(
       select: false
     },
 
-    // ================= AADHAAR DETAILS =================
+    /* ================= AADHAAR ================= */
     aadhaarLast4: {
       type: String,
       required: true,
       match: [/^\d{4}$/, "Aadhaar must be last 4 digits"]
     },
 
-    // ⚠️ Store only if encrypted
     aadhaarNumber: {
       type: String,
       select: false
     },
-    // ================= VERIFICATION =================
+
+    /* ================= ADDRESSES ================= */
+    currentAddress: {
+      type: addressSchema,
+      required: true
+    },
+
+    permanentAddress: {
+      type: addressSchema,
+      required: true
+    },
+
+    /* ================= VERIFICATION ================= */
     isVerified: {
       type: Boolean,
       default: false
     },
 
-    // ================= VEHICLE =================
+    emailOtp: {
+      type: String,
+      select: false
+    },
+
+    emailOtpExpiry: {
+      type: Date,
+      select: false
+    },
+
+    /* ================= VEHICLE ================= */
     vehicleNumber: {
       type: String,
       required: true
     },
 
-    // ================= STATUS =================
+    /* ================= STATUS ================= */
     status: {
       type: String,
       enum: ["available", "busy", "offline"],
       default: "offline"
     },
-    // add inside deliveryBoySchema
 
-emailOtp: {
-  type: String,
-  select: false
-},
-
-emailOtpExpiry: {
-  type: Date,
-  select: false
-},
-    // ================= ACCOUNT CONTROL =================
+    /* ================= ACCOUNT CONTROL ================= */
     isActive: {
       type: Boolean,
       default: true
@@ -98,30 +133,20 @@ emailOtpExpiry: {
   }
 );
 
-
-
-// =====================================================
-// 🔐 HASH PASSWORD BEFORE SAVE
-// =====================================================
+/* =====================================================
+   🔐 HASH PASSWORD BEFORE SAVE
+===================================================== */
 deliveryBoySchema.pre("save", async function () {
   if (!this.isModified("password")) return;
   this.password = await bcrypt.hash(this.password, 10);
 });
 
-
-
-
-// =====================================================
-// 🔑 COMPARE PASSWORD (LOGIN)
-// =====================================================
+/* =====================================================
+   🔑 COMPARE PASSWORD
+===================================================== */
 deliveryBoySchema.methods.comparePassword = async function (enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
+  return bcrypt.compare(enteredPassword, this.password);
 };
 
-
-
-// =====================================================
-// 📦 EXPORT MODEL
-// =====================================================
 const DeliveryBoy = mongoose.model("DeliveryBoy", deliveryBoySchema);
 export default DeliveryBoy;
