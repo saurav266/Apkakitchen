@@ -15,6 +15,8 @@ import UserRoute from './route/userRoute.js';
 import DeliveryBoyRoute from './route/deliveryBoyRoute.js';
 import AdminRoute from './route/adminRoute.js';
 import authRoute from './route/authRoute.js';
+import orderRoute from './route/orderRoute.js';
+
 app.use(
   cors({
     origin: "http://localhost:5173", // ✅ EXACT frontend URL
@@ -30,6 +32,7 @@ app.use('/api/users', UserRoute);
 app.use('/api/delivery', DeliveryBoyRoute);
 app.use('/api/admin', AdminRoute);
 app.use('/api/auth', authRoute);
+app.use('/api/orders', orderRoute);
 
 app.get('/', (req, res) => {
     res.send('Welcome to the Serger API!');

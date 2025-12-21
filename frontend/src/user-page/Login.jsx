@@ -84,8 +84,8 @@ export default function Login() {
           transition={{ duration: 0.4 }}
           className="bg-white/90 backdrop-blur rounded-3xl shadow-2xl px-8 py-12 md:px-12"
         >
-          <h2 className="text-3xl font-bold text-gray-800 mb-2">
-            Login to <span className="text-orange-600">Apka Kitchen</span>
+          <h2 className="text-3xl font-bold mb-2">
+            Login to <span className="text-orange-600">Apna Kitchen</span>
           </h2>
 
           <form onSubmit={handleSubmit} className="space-y-6 mt-6">

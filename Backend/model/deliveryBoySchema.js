@@ -72,7 +72,17 @@ const deliveryBoySchema = new mongoose.Schema(
       enum: ["available", "busy", "offline"],
       default: "offline"
     },
+    // add inside deliveryBoySchema
 
+emailOtp: {
+  type: String,
+  select: false
+},
+
+emailOtpExpiry: {
+  type: Date,
+  select: false
+},
     // ================= ACCOUNT CONTROL =================
     isActive: {
       type: Boolean,
@@ -93,16 +103,11 @@ const deliveryBoySchema = new mongoose.Schema(
 // =====================================================
 // 🔐 HASH PASSWORD BEFORE SAVE
 // =====================================================
-deliveryBoySchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
-
-  try {
-    this.password = await bcrypt.hash(this.password, 10);
-    next();
-  } catch (error) {
-    next(error);
-  }
+deliveryBoySchema.pre("save", async function () {
+  if (!this.isModified("password")) return;
+  this.password = await bcrypt.hash(this.password, 10);
 });
+
 
 
 

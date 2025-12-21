@@ -9,15 +9,21 @@ import Menu from "./user-page/Menu.jsx";
 import Cart from "./user-page/Cart.jsx";
 import Login from "./user-page/Login.jsx";
 import Register from "./user-page/Register.jsx";
-import Contact from "./user-page/Contact.jsx";
-import About from "./user-page/About.jsx";
+import UserProfile from "./user-page/UserProfilePage.jsx";
+import EditProfilePage from "./user-page/EditProfilePage.jsx";
+import OrderPage from "./user-page/Order.jsx";
 
 // Admin Pages
 import AdminDashboard from "./Admin-pages/AdminDashboard.jsx";
 import AdminOrders from "./Admin-pages/AdminOrders.jsx";
-import AdminUsers from "./Admin-pages/AdminUsers.jsx";
-import AdminProducts from "./Admin-pages/AdminProduct.jsx";
 import AdminDelivery from "./Admin-pages/AdminDelivery.jsx";
+
+
+// delivery
+import DeliveryLayout from "./layouts/DeliveryLayout.jsx";
+import DeliveryDashboard from "./Delivery-page/DeliveryDashboard.jsx";
+import DeliveryOrders from "./Delivery-page/DeliveryOrders.jsx";
+
 
 function App() {
   return (
@@ -33,9 +39,32 @@ function App() {
         {/* PUBLIC */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/contact" element={<Contact />} />
-        <Route path="/about" element={<About />} />
+
+        {/* 🔒 USER PROTECTED */}
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute allowedRoles={["user"]}>
+              <UserProfile />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/profile/edit"
+          element={
+            <ProtectedRoute allowedRoles={["user"]}>
+              <EditProfilePage />
+            </ProtectedRoute>
+          }
+        />
+
       </Route>
+      <Route path="/order" element={
+        <ProtectedRoute allowedRoles={["user"]}>
+          <OrderPage />
+        </ProtectedRoute>
+      } />
 
       {/* ================= ADMIN ROUTES ================= */}
       <Route
@@ -48,12 +77,22 @@ function App() {
       >
         <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="orders" element={<AdminOrders />} />
-        <Route path="users" element={<AdminUsers />} />
-        <Route path="products" element={<AdminProducts />} />
         <Route path="delivery" element={<AdminDelivery />} />
       </Route>
 
+      {/* ================= DELIVERY ROUTES ================= */}
+      <Route
+        path="/delivery"
+        element={<DeliveryLayout />}
+      >
+        <Route path="dashboard" element={<DeliveryDashboard />} />
+        <Route path="orders" element={<DeliveryOrders />} />
+        {/* <Route path="profile" element={<DeliveryProfile />} /> */}
+      </Route>
+
     </Routes>
+
+
   );
 }
 

@@ -1,18 +1,26 @@
 import express from "express";
-import { addDeliveryBoy } from "../controller/deliveryBoyController.js";
+import { addDeliveryBoy ,verifyByOtpDeliveryBoy,allDeliveryBoys} from "../controller/deliveryBoyController.js";
 import { authorizeRoles } from "../middleware/authMiddleware.js";
 
 
 const router = express.Router();
 
 router.post(
-  "/admin/Add-delivery-boy",
+  "/Add-delivery-boy",
 
-  authorizeRoles("admin"),
+  // authorizeRoles("admin"),
   addDeliveryBoy
 );
+router.post(
+  "/verify-otp",
+  verifyByOtpDeliveryBoy
+);
 
+router.get(
+  "/delivery-boys",
 
-
+  
+  allDeliveryBoys
+);
 
 export default router;

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ShoppingCart, User } from "lucide-react";
 import TomatoDrip from "./TomatoDrip";
 import logo from "../assets/logo/logo.png";
+import { useAuth } from "../context/AuthContext.jsx";
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
@@ -126,6 +127,12 @@ export default function Navbar() {
           className="block w-full text-left hover:text-orange-600 mt-1"
         >
           Logout
+        </button>
+        <button
+          onClick={() => navigate("/order")}
+          className="block w-full text-left hover:text-orange-600 mt-1"
+        >
+          My Orders
         </button>
       </div>
     </div>

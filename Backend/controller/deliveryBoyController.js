@@ -1,8 +1,23 @@
 import jwt from "jsonwebtoken";
 import DeliveryBoy from "../model/deliveryBoySchema.js";
+import crypto from "crypto";
+
 
 /**
  * @desc    Add new delivery boy
+ * @route   POST /api/admin/delivery-boy
+ * @access  Admin
+ */
+import bcrypt from "bcryptjs";
+import mongoose from "mongoose";
+import { sendAddDeliveryBoyOtpEmail } from "../services/emailService.js";
+
+
+/* ===============================
+   ADD DELIVERY BOY (ADMIN ONLY)
+================================ */
+/**
+ * @desc    Admin sends OTP to delivery boy email
  * @route   POST /api/admin/delivery-boy
  * @access  Admin
  */
@@ -12,71 +27,143 @@ export const addDeliveryBoy = async (req, res) => {
       name,
       email,
       password,
+      phone,
       aadhaarLast4,
       aadhaarNumber,
-      vehicleNumber,
-      aadhaarImage
+      vehicleNumber
     } = req.body;
 
-    // ================= VALIDATION =================
-    if (
-      !name ||
-      !email ||
-      !password ||
-      !aadhaarLast4 ||
-      !vehicleNumber ||
-      !aadhaarImage
-    ) {
+    if (!name || !email || !password || !phone || !aadhaarLast4 || !vehicleNumber) {
       return res.status(400).json({
         success: false,
-        message: "All required fields must be provided"
+        message: "All fields required"
       });
     }
 
-    // ================= CHECK EXISTING =================
-    const existing = await DeliveryBoy.findOne({ email });
-    if (existing) {
-      return res.status(409).json({
-        success: false,
-        message: "Delivery boy already exists with this email"
-      });
-    }
-
-    // ================= CREATE DELIVERY BOY =================
-    const deliveryBoy = await DeliveryBoy.create({
-      name,
-      email,
-      password,              // hashed by schema
-      aadhaarLast4,
-      aadhaarNumber,         // store only if encrypted
-      aadhaarImage,
-      vehicleNumber,
-      role: "delivery",
-      status: "offline",
-      isVerified: false
+    const exists = await DeliveryBoy.findOne({
+      $or: [{ email }, { vehicleNumber }]
     });
 
-    return res.status(201).json({
+    if (exists) {
+      return res.status(400).json({
+        success: false,
+        message: "Delivery boy already exists"
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // 🔐 OTP TOKEN (10 MIN)
+    const otpToken = jwt.sign(
+      {
+        name,
+        email,
+        password: hashedPassword,
+        phone,
+        aadhaarLast4,
+        aadhaarNumber,
+        vehicleNumber,
+        otp
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "10m" }
+    );
+
+    await sendAddDeliveryBoyOtpEmail({
+      email,
+      name,
+      otp,
+      lang: "en"
+    });
+
+    return res.status(200).json({
       success: true,
-      message: "Delivery boy added successfully",
-      deliveryBoy: {
-        id: deliveryBoy._id,
-        name: deliveryBoy.name,
-        email: deliveryBoy.email,
-        status: deliveryBoy.status,
-        isVerified: deliveryBoy.isVerified
-      }
+      message: "OTP sent to delivery boy email",
+      otpToken
     });
 
   } catch (error) {
     console.error("Add Delivery Boy Error:", error);
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
-      message: "Server error while adding delivery boy"
+      message: error.message
     });
   }
 };
 
+
+
+export const verifyByOtpDeliveryBoy = async (req, res) => {
+  try {
+    const { otp, otpToken } = req.body;
+
+    if (!otp || !otpToken) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP and token required"
+      });
+    }
+
+    const decoded = jwt.verify(otpToken, process.env.JWT_SECRET);
+
+    if (decoded.otp !== otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid OTP"
+      });
+    }
+
+    // Safety check
+    const exists = await DeliveryBoy.findOne({ email: decoded.email });
+    if (exists) {
+      return res.status(400).json({
+        success: false,
+        message: "Delivery boy already exists"
+      });
+    }
+
+    const deliveryBoy = await DeliveryBoy.create({
+      name: decoded.name,
+      email: decoded.email,
+      password: decoded.password,
+      phone: decoded.phone,
+      aadhaarLast4: decoded.aadhaarLast4,
+      aadhaarNumber: decoded.aadhaarNumber,
+      vehicleNumber: decoded.vehicleNumber,
+      role: "delivery",
+      status: "offline",
+      isVerified: true,
+      isActive: true
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Delivery boy created successfully",
+      deliveryBoy: {
+        id: deliveryBoy._id,
+        name: deliveryBoy.name,
+        email: deliveryBoy.email,
+        phone: deliveryBoy.phone
+      }
+    });
+
+  } catch (error) {
+    if (error.name === "TokenExpiredError") {
+      return res.status(400).json({
+        success: false,
+        message: "OTP expired"
+      });
+    }
+
+    console.error("Verify Delivery Boy OTP Error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+ 
 
 /**
  * @desc    Login delivery boy
@@ -214,4 +301,49 @@ export const getDeliveryBoy= async (req, res) => {
       message: "Server error while fetching delivery boy details"
     });
   } 
+};
+
+export const allDeliveryBoys= async (req, res) => {
+  try {
+    const deliveryBoys = await DeliveryBoy.find().select("-password");
+
+    return res.status(200).json({
+      success: true,
+      deliveryBoys
+    });
+  } catch (error) {
+    console.error("Get All Delivery Boys Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while fetching delivery boys"
+    });
+  }
+};
+
+export const getDeliveryBoyById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deliveryBoy = await DeliveryBoy.findById(id)
+      .select("-password -aadhaarNumber"); // ❌ hide sensitive data
+
+    if (!deliveryBoy) {
+      return res.status(404).json({
+        success: false,
+        message: "Delivery boy not found"
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      deliveryBoy
+    });
+
+  } catch (error) {
+    console.error("Get Delivery Boy Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
+  }
 };
