@@ -9,6 +9,8 @@ import Menu from "./user-page/Menu.jsx";
 import Cart from "./user-page/Cart.jsx";
 import Login from "./user-page/Login.jsx";
 import Register from "./user-page/Register.jsx";
+import Contact from "./user-page/Contact.jsx";
+import About from "./user-page/About.jsx";
 
 // Admin Pages
 import AdminDashboard from "./Admin-pages/AdminDashboard.jsx";
@@ -27,6 +29,8 @@ function App() {
         <Route path="/cart" element={<Cart />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/about" element={<About />} />
       </Route>
 
       {/* 🛡️ ADMIN ROUTES */}

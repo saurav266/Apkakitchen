@@ -66,7 +66,7 @@ export default function Register() {
             Create your <span className="text-orange-600">Account</span>
           </h2>
           <p className="text-gray-500 mb-8">
-            Join Apna Kitchen & enjoy delicious food
+            Join Apka Kitchen & enjoy delicious food
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-6">

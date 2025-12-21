@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShoppingCart, User } from "lucide-react";
 import TomatoDrip from "./TomatoDrip";
-
+import logo from "../assets/logo/logo.png";
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
@@ -60,17 +60,30 @@ export default function Navbar() {
 
         <div className="relative max-w-7xl mx-auto px-6 h-[90px] flex items-center justify-between">
           {/* LOGO */}
-          <div
-            onClick={() => navigate("/")}
-            className="cursor-pointer leading-none"
-          >
-            <div className="text-2xl font-bold text-white tracking-wide">
-              Apna<span className="text-yellow-200">Kitchen</span>
-            </div>
-            <div className="text-[11px] tracking-widest text-white/70 uppercase">
-              Indian Taste
-            </div>
-          </div>
+<div
+  onClick={() => navigate("/")}
+  className="cursor-pointer flex items-center"
+>
+  <div
+    className="
+      w-16 h-16 md:w-18 md:h-18
+      rounded-full
+      bg-white/90
+      flex items-center justify-center
+      shadow-[0_10px_25px_rgba(0,0,0,0.25)]
+      border-2 border-yellow-300
+      backdrop-blur
+      hover:scale-105 transition
+    "
+  >
+    <img
+      src={logo}
+      alt="Apna Kitchen Logo"
+      className="h-12 md:h-14 w-auto object-contain"
+    />
+  </div>
+</div>
+
 
           {/* DESKTOP MENU */}
           <nav className="hidden md:flex items-center gap-10">

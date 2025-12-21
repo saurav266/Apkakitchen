@@ -1,5 +1,5 @@
 import { MapPin, Phone, Mail, Instagram, Facebook, Twitter, Heart } from "lucide-react";
-
+import logo from "../assets/logo/logo.png";
 export default function Footer() {
   return (
     <footer className="bg-orange-50 text-gray-700 pt-16 pb-10">
@@ -8,14 +8,20 @@ export default function Footer() {
 
         {/* 🍽️ Brand */}
         <div>
-          <h2 className="text-3xl font-bold tracking-wide text-gray-900">
-            Apna <span className="text-orange-600">Kitchen</span>
-          </h2>
-          <p className="mt-4 text-sm leading-relaxed text-gray-600">
+          <div className="mb-4">
+            <img
+              src={logo}
+              alt="Apna Kitchen Logo"
+              className="h-40 w-auto object-contain"
+            />
+          </div>
+
+          <p className="mt-2 text-sm leading-relaxed text-gray-600">
             Serving hot, fresh & authentic Indian food with love.
             From our kitchen to your home — every bite feels like home. ❤️
           </p>
         </div>
+
 
         {/* 📜 Links */}
         <div>
@@ -81,9 +87,9 @@ export default function Footer() {
 
       {/* ❤️ Bottom */}
       <div className="mt-12 text-center text-sm text-gray-500">
-        © {new Date().getFullYear()} Apna Kitchen. All rights reserved.  
+        © {new Date().getFullYear()} Apka Kitchen. All rights reserved.  
         <span className="block mt-1">
-          Made with <Heart className="inline w-4 h-4 text-orange-500 fill-orange-500" /> in India
+          Website made by <Heart className="inline w-4 h-4 text-orange-500 fill-orange-500" /> TrionexIndia
         </span>
       </div>
     </footer>
