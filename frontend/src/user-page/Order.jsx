@@ -38,31 +38,36 @@ export default function UserOrdersPage() {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
-      className="max-w-6xl mx-auto p-6 space-y-6"
+      className="max-w-6xl mx-auto px-4 py-10 space-y-8"
     >
-      {/* HEADER */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">📦 My Orders</h1>
+      {/* ================= HEADER ================= */}
+      <div className="pt-10 relative overflow-hidden rounded-3xl bg-gradient-to-br from-red-600 via-red-500 to-yellow-400 p-[2px] shadow-xl">
+        <div className="bg-white/90 backdrop-blur-xl rounded-3xl px-6 py-8 flex flex-col md:flex-row justify-between items-center gap-4">
+          <h1 className="text-3xl font-bold text-gray-800">
+            📦 My Orders
+          </h1>
 
-        <div className="flex gap-2">
-          <FilterBtn label="All" active={filter === "all"} onClick={() => setFilter("all")} />
-          <FilterBtn label="Active" active={filter === "active"} onClick={() => setFilter("active")} />
-          <FilterBtn label="Delivered" active={filter === "delivered"} onClick={() => setFilter("delivered")} />
+          <div className="flex gap-2">
+            <FilterBtn label="All" active={filter === "all"} onClick={() => setFilter("all")} />
+            <FilterBtn label="Active" active={filter === "active"} onClick={() => setFilter("active")} />
+            <FilterBtn label="Delivered" active={filter === "delivered"} onClick={() => setFilter("delivered")} />
+          </div>
         </div>
       </div>
 
-      {/* ORDERS */}
+      {/* ================= ORDERS ================= */}
       {filteredOrders.length === 0 && (
-        <p className="text-gray-500">No orders found.</p>
+        <p className="text-gray-500 text-center">No orders found.</p>
       )}
 
       {filteredOrders.map(order => (
         <motion.div
           key={order._id}
           layout
-          className="bg-white rounded-2xl shadow overflow-hidden"
+          whileHover={{ y: -4 }}
+          className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-lg overflow-hidden border border-white/40"
         >
           {/* SUMMARY */}
           <div
@@ -72,7 +77,7 @@ export default function UserOrdersPage() {
             className="p-6 cursor-pointer flex justify-between items-center"
           >
             <div>
-              <p className="font-semibold">
+              <p className="font-semibold text-gray-800">
                 Order #{order._id.slice(-6)}
               </p>
               <p className="text-sm text-gray-500">
@@ -82,7 +87,9 @@ export default function UserOrdersPage() {
 
             <div className="flex items-center gap-4">
               <StatusBadge status={order.orderStatus} />
-              <span className="font-bold">₹{order.totalAmount}</span>
+              <span className="font-bold text-red-600">
+                ₹{order.totalAmount}
+              </span>
             </div>
           </div>
 
@@ -93,7 +100,7 @@ export default function UserOrdersPage() {
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: "auto", opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                className="px-6 pb-6 space-y-4"
+                className="px-6 pb-6 space-y-5"
               >
                 {/* TIMELINE */}
                 <OrderTimeline status={order.orderStatus} />
@@ -101,7 +108,7 @@ export default function UserOrdersPage() {
                 {/* ITEMS */}
                 <div className="space-y-2">
                   {order.items.map((item, i) => (
-                    <div key={i} className="flex justify-between text-sm">
+                    <div key={i} className="flex justify-between text-sm text-gray-700">
                       <span>{item.name} × {item.quantity}</span>
                       <span>₹{item.price * item.quantity}</span>
                     </div>
@@ -109,8 +116,8 @@ export default function UserOrdersPage() {
                 </div>
 
                 {/* META */}
-                <div className="grid md:grid-cols-2 gap-4 text-sm text-gray-600">
-                  <p>Payment: {order.paymentMethod} ({order.paymentStatus})</p>
+                <div className="grid md:grid-cols-2 gap-3 text-sm text-gray-600">
+                  <p>💳 {order.paymentMethod} ({order.paymentStatus})</p>
                   <p>📍 {order.deliveryAddress}</p>
                 </div>
 
@@ -138,8 +145,10 @@ function FilterBtn({ label, active, onClick }) {
   return (
     <button
       onClick={onClick}
-      className={`px-4 py-1 rounded-full text-sm font-semibold ${
-        active ? "bg-black text-white" : "bg-gray-200"
+      className={`px-4 py-1.5 rounded-full text-sm font-semibold transition ${
+        active
+          ? "bg-yellow-300 text-red-900 shadow"
+          : "bg-white text-gray-600 border"
       }`}
     >
       {label}
@@ -149,8 +158,8 @@ function FilterBtn({ label, active, onClick }) {
 
 function StatusBadge({ status }) {
   const map = {
-    placed: "bg-yellow-100 text-yellow-700",
-    preparing: "bg-blue-100 text-blue-700",
+    placed: "bg-yellow-100 text-yellow-800",
+    preparing: "bg-orange-100 text-orange-700",
     out_for_delivery: "bg-purple-100 text-purple-700",
     delivered: "bg-green-100 text-green-700",
     cancelled: "bg-red-100 text-red-700"
@@ -168,20 +177,21 @@ function OrderTimeline({ status }) {
 
   return (
     <div className="flex justify-between items-center">
-      {steps.map(step => (
-        <div key={step} className="flex-1 text-center">
-          <div
-            className={`h-2 mx-1 rounded-full ${
-              steps.indexOf(step) <= steps.indexOf(status)
-                ? "bg-green-500"
-                : "bg-gray-300"
-            }`}
-          />
-          <p className="text-xs mt-1">
-            {step.replaceAll("_", " ")}
-          </p>
-        </div>
-      ))}
+      {steps.map(step => {
+        const active = steps.indexOf(step) <= steps.indexOf(status);
+        return (
+          <div key={step} className="flex-1 text-center">
+            <div
+              className={`h-2 mx-1 rounded-full ${
+                active ? "bg-yellow-400" : "bg-gray-300"
+              }`}
+            />
+            <p className="text-xs mt-1 capitalize text-gray-600">
+              {step.replaceAll("_", " ")}
+            </p>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -189,8 +199,9 @@ function OrderTimeline({ status }) {
 function ActionBtn({ text }) {
   return (
     <motion.button
+      whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
-      className="bg-black text-white px-4 py-2 rounded-lg text-sm"
+      className="px-5 py-2 rounded-full bg-red-600 text-white text-sm font-semibold shadow hover:bg-red-700 transition"
     >
       {text}
     </motion.button>
@@ -201,9 +212,12 @@ function ActionBtn({ text }) {
 
 function Skeleton() {
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-4">
+    <div className="max-w-6xl mx-auto px-4 py-10 space-y-5">
       {[1, 2, 3].map(i => (
-        <div key={i} className="h-28 bg-gray-200 rounded-2xl animate-pulse" />
+        <div
+          key={i}
+          className="h-28 bg-orange-100 rounded-3xl animate-pulse"
+        />
       ))}
     </div>
   );

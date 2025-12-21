@@ -12,12 +12,15 @@ import Register from "./user-page/Register.jsx";
 import UserProfile from "./user-page/UserProfilePage.jsx";
 import EditProfilePage from "./user-page/EditProfilePage.jsx";
 import OrderPage from "./user-page/Order.jsx";
+import About from "./user-page/About.jsx";
+import Contact from "./user-page/Contact.jsx";
 
 // Admin Pages
 import AdminDashboard from "./Admin-pages/AdminDashboard.jsx";
 import AdminOrders from "./Admin-pages/AdminOrders.jsx";
 import AdminDelivery from "./Admin-pages/AdminDelivery.jsx";
-
+import AdminUsers from "./Admin-pages/AdminUsers.jsx";
+import AdminProduct from "./Admin-pages/AdminProduct.jsx";
 
 // delivery
 import DeliveryLayout from "./layouts/DeliveryLayout.jsx";
@@ -39,6 +42,8 @@ function App() {
         {/* PUBLIC */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/contact" element={<Contact />} />
 
         {/* 🔒 USER PROTECTED */}
         <Route
@@ -59,12 +64,13 @@ function App() {
           }
         />
 
-      </Route>
-      <Route path="/order" element={
+        <Route path="/order" element={
         <ProtectedRoute allowedRoles={["user"]}>
           <OrderPage />
         </ProtectedRoute>
       } />
+
+      </Route>
 
       {/* ================= ADMIN ROUTES ================= */}
       <Route
@@ -78,6 +84,8 @@ function App() {
         <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="orders" element={<AdminOrders />} />
         <Route path="delivery" element={<AdminDelivery />} />
+        <Route path="users" element={<AdminUsers />} />
+        <Route path="products" element={<AdminProduct />} />
       </Route>
 
       {/* ================= DELIVERY ROUTES ================= */}
