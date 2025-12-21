@@ -16,7 +16,7 @@ const links = [
   { name: "Orders", path: "/admin/orders", icon: ClipboardList },
   { name: "Users", path: "/admin/users", icon: Users },
   { name: "Delivery", path: "/admin/delivery", icon: Bike },
-  { name: "Menu", path: "/admin/menu", icon: UtensilsCrossed },
+  { name: "Menu", path: "/admin/products", icon: UtensilsCrossed },
   { name: "Settings", path: "/admin/settings", icon: Settings }
 ];
 

@@ -3,20 +3,19 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 
 export default function Cart() {
-    const user = JSON.parse(localStorage.getItem("user"));
   const [cart, setCart] = useState([]);
   const navigate = useNavigate();
-    const handleCheckout = () => {
-        if (cart.length === 0) return;
 
-        const user = JSON.parse(localStorage.getItem("user"));
-        if (!user) {
-            navigate("/login");
-        } else {
-            navigate("/checkout");
-        }
-    };
+  const handleCheckout = () => {
+    if (cart.length === 0) return;
 
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (!user) {
+      navigate("/login");
+    } else {
+      navigate("/checkout");
+    }
+  };
 
   useEffect(() => {
     const c = JSON.parse(localStorage.getItem("cart")) || [];
@@ -24,33 +23,24 @@ export default function Cart() {
   }, []);
 
   const updateQty = (id, delta) => {
-  let c = [...cart];
-  const item = c.find((i) => i.id === id);
-  if (!item) return;
+    let c = [...cart];
+    const item = c.find((i) => i.id === id);
+    if (!item) return;
 
-  item.qty += delta;
+    item.qty += delta;
+    c = c.filter((i) => i.qty > 0);
 
-  // ✅ remove if qty <= 0
-  c = c.filter((i) => i.qty > 0);
-
-  setCart(c);
-  localStorage.setItem("cart", JSON.stringify(c));
-
-  // 🔔 notify navbar
-  window.dispatchEvent(new Event("cartUpdated"));
-};
-
+    setCart(c);
+    localStorage.setItem("cart", JSON.stringify(c));
+    window.dispatchEvent(new Event("cartUpdated"));
+  };
 
   const removeItem = (id) => {
-  const c = cart.filter((i) => i.id !== id);
-
-  setCart(c);
-  localStorage.setItem("cart", JSON.stringify(c));
-
-  // 🔔 notify navbar
-  window.dispatchEvent(new Event("cartUpdated"));
-};
-
+    const c = cart.filter((i) => i.id !== id);
+    setCart(c);
+    localStorage.setItem("cart", JSON.stringify(c));
+    window.dispatchEvent(new Event("cartUpdated"));
+  };
 
   const total = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
 
@@ -75,17 +65,30 @@ export default function Cart() {
         ) : (
           <div className="bg-white/90 rounded-2xl shadow-lg p-6">
             {cart.map((item) => (
-              <div
+              <motion.div
                 key={item.id}
-                className="flex items-center justify-between border-b py-4 last:border-b-0"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-4 border-b py-4 last:border-b-0"
               >
-                <div>
-                  <h3 className="font-semibold">{item.name}</h3>
+                {/* 🍽️ Image */}
+                <div className="w-20 h-20 rounded-xl overflow-hidden bg-orange-50 flex-shrink-0">
+                  <img
+                    src={item.img || "/placeholder-food.png"}
+                    alt={item.name}
+                    className="w-full h-full object-contain hover:scale-110 transition"
+                  />
+                </div>
+
+                {/* 📝 Info */}
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-800">{item.name}</h3>
                   <p className="text-sm text-gray-500">
                     ₹{item.price} each
                   </p>
                 </div>
 
+                {/* 🔢 Qty + Price + Remove */}
                 <div className="flex items-center gap-4">
                   {/* Qty */}
                   <div className="flex items-center gap-2">
@@ -104,7 +107,7 @@ export default function Cart() {
                     </button>
                   </div>
 
-                  <span className="w-20 text-right font-semibold">
+                  <span className="w-20 text-right font-semibold text-gray-800">
                     ₹{item.price * item.qty}
                   </span>
 
@@ -115,7 +118,7 @@ export default function Cart() {
                     Remove
                   </button>
                 </div>
-              </div>
+              </motion.div>
             ))}
 
             {/* TOTAL */}
@@ -136,10 +139,9 @@ export default function Cart() {
                 whileHover={{ scale: 1.05 }}
                 onClick={handleCheckout}
                 className="px-8 py-3 rounded-full bg-gradient-to-r from-orange-600 to-red-600 text-white font-semibold shadow-lg"
-                >
+              >
                 Proceed to Checkout
-                </motion.button>
-
+              </motion.button>
             </div>
           </div>
         )}

@@ -9,12 +9,15 @@ import Menu from "./user-page/Menu.jsx";
 import Cart from "./user-page/Cart.jsx";
 import Login from "./user-page/Login.jsx";
 import Register from "./user-page/Register.jsx";
-import UserProfile from "./user-page/UserProfilePage.jsx";
-import EditProfilePage from "./user-page/EditProfilePage.jsx";
+import Contact from "./user-page/Contact.jsx";
+import About from "./user-page/About.jsx";
 
 // Admin Pages
 import AdminDashboard from "./Admin-pages/AdminDashboard.jsx";
 import AdminOrders from "./Admin-pages/AdminOrders.jsx";
+import AdminUsers from "./Admin-pages/AdminUsers.jsx";
+import AdminProducts from "./Admin-pages/AdminProduct.jsx";
+import AdminDelivery from "./Admin-pages/AdminDelivery.jsx";
 
 function App() {
   return (
@@ -30,26 +33,8 @@ function App() {
         {/* PUBLIC */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-
-        {/* 🔒 USER PROTECTED */}
-        <Route
-          path="/profile"
-          element={
-            <ProtectedRoute allowedRoles={["user"]}>
-              <UserProfile />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/profile/edit"
-          element={
-            <ProtectedRoute allowedRoles={["user"]}>
-              <EditProfilePage />
-            </ProtectedRoute>
-          }
-        />
-
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/about" element={<About />} />
       </Route>
 
       {/* ================= ADMIN ROUTES ================= */}
@@ -63,6 +48,9 @@ function App() {
       >
         <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="orders" element={<AdminOrders />} />
+        <Route path="users" element={<AdminUsers />} />
+        <Route path="products" element={<AdminProducts />} />
+        <Route path="delivery" element={<AdminDelivery />} />
       </Route>
 
     </Routes>
