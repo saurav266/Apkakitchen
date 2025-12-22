@@ -1,8 +1,10 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";  
 
 export default function MiniCart({ open, cart, onClose }) {
   const total = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
+  const navigate = useNavigate();
 
   return (
     <AnimatePresence>
@@ -73,6 +75,7 @@ export default function MiniCart({ open, cart, onClose }) {
               </div>
 
               <motion.button
+                onClick={() => navigate("/checkout")}
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
                 className="

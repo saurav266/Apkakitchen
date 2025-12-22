@@ -14,6 +14,8 @@ import EditProfilePage from "./user-page/EditProfilePage.jsx";
 import OrderPage from "./user-page/Order.jsx";
 import About from "./user-page/About.jsx";
 import Contact from "./user-page/Contact.jsx";
+import CheckOut from "./user-page/CheckOut.jsx";
+import OrderSuccess from "./user-page/OrderSuccess.jsx";
 
 // Admin Pages
 import AdminDashboard from "./Admin-pages/AdminDashboard.jsx";
@@ -26,7 +28,8 @@ import AdminProduct from "./Admin-pages/AdminProduct.jsx";
 import DeliveryLayout from "./layouts/DeliveryLayout.jsx";
 import DeliveryDashboard from "./Delivery-page/DeliveryDashboard.jsx";
 import DeliveryOrders from "./Delivery-page/DeliveryOrders.jsx";
-
+import Profile from "./Delivery-page/Profile.jsx";
+import Earnings from "./Delivery-page/Earnings.jsx";
 
 function App() {
   return (
@@ -44,6 +47,7 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
+        <Route path="/order-success" element={<OrderSuccess />} />
 
         {/* 🔒 USER PROTECTED */}
         <Route
@@ -64,11 +68,20 @@ function App() {
           }
         />
 
+        <Route
+          path="/checkout"
+          element={
+            <ProtectedRoute allowedRoles={["user"]}>
+              <CheckOut />
+            </ProtectedRoute>
+          }
+        />
+
         <Route path="/order" element={
         <ProtectedRoute allowedRoles={["user"]}>
           <OrderPage />
         </ProtectedRoute>
-      } />
+      } />  
 
       </Route>
 
@@ -95,7 +108,8 @@ function App() {
       >
         <Route path="dashboard" element={<DeliveryDashboard />} />
         <Route path="orders" element={<DeliveryOrders />} />
-        {/* <Route path="profile" element={<DeliveryProfile />} /> */}
+        <Route path="profile" element={<Profile/>}/>
+        <Route path="earnings" element={<Earnings/>}/>
       </Route>
 
     </Routes>

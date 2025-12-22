@@ -1,220 +1,204 @@
-import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import {
+  MapPin,
+  Clock,
+  IndianRupee,
+  Bell,
+  Power,
+  CheckCircle,
+  XCircle,
+} from "lucide-react";
+import { useTheme } from "../context/Themecontext.jsx";
 
 export default function DeliveryDashboard() {
-  const [online, setOnline] = useState(true);
-  const [activeOrder, setActiveOrder] = useState(0);
+  const { dark } = useTheme();
 
-  const orders = [
+  const [online, setOnline] = useState(true);
+  const [orders, setOrders] = useState([
     {
-      id: "ORD-1201",
-      customer: "Amit Sharma",
-      address: "MG Road, Delhi",
-      distance: "3.4 km",
-      amount: "₹80",
-      status: "Picked"
+      id: 1,
+      customer: "Rohit Sharma",
+      address: "Main Road, Ranchi",
+      distance: "3.2 km",
+      time: 18 * 60,
     },
-    {
-      id: "ORD-1202",
-      customer: "Neha Verma",
-      address: "Sector 18, Noida",
-      distance: "4.1 km",
-      amount: "₹95",
-      status: "Assigned"
+  ]);
+  const [earnings, setEarnings] = useState(420);
+
+  // 🔔 sound + vibration on new order
+  useEffect(() => {
+    if (orders.length > 0) {
+      const audio = new Audio("/sounds/notify.mp3");
+      audio.play().catch(() => {});
+      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
     }
-  ];
+  }, [orders]);
+
+  const acceptOrder = (id) => {
+    alert("Order accepted!");
+  };
+
+  const rejectOrder = (id) => {
+    setOrders((prev) => prev.filter((o) => o.id !== id));
+  };
+
+  return (
+    <section
+      className={`min-h-screen pt-6 pb-24 px-4 transition-colors ${
+        dark
+          ? "bg-slate-900 text-white"
+          : "bg-gradient-to-br from-orange-50 via-amber-50 to-red-50 text-gray-800"
+      }`}
+    >
+      <div className="max-w-md mx-auto space-y-6">
+
+        {/* 🟢 Header */}
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold">
+            Delivery{" "}
+            <span className="text-orange-600">Dashboard</span>
+          </h2>
+
+          <button
+            onClick={() => setOnline(!online)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold shadow transition ${
+              online
+                ? "bg-green-100 text-green-700"
+                : dark
+                ? "bg-slate-700 text-gray-300"
+                : "bg-gray-200 text-gray-600"
+            }`}
+          >
+            <Power className="w-4 h-4" />
+            {online ? "Online" : "Offline"}
+          </button>
+        </div>
+
+        {/* 💰 Earnings */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`rounded-2xl shadow-lg p-5 flex items-center justify-between ${
+            dark
+              ? "bg-slate-800 border border-slate-700"
+              : "bg-white/90 backdrop-blur"
+          }`}
+        >
+          <div>
+            <p className="text-sm text-gray-400">Today’s Earnings</p>
+            <p className="text-2xl font-bold text-orange-600">
+              ₹{earnings}
+            </p>
+          </div>
+          <IndianRupee className="w-10 h-10 text-orange-400" />
+        </motion.div>
+
+        {/* 🗺️ Map */}
+        <div
+          className={`rounded-2xl shadow-lg overflow-hidden ${
+            dark ? "bg-slate-800 border border-slate-700" : "bg-white/90"
+          }`}
+        >
+          <div
+            className={`flex items-center gap-2 px-4 py-3 border-b ${
+              dark ? "border-slate-700" : ""
+            }`}
+          >
+            <MapPin className="text-orange-600 w-5 h-5" />
+            <h3 className="font-semibold">Live Route</h3>
+          </div>
+          <div
+            className={`h-48 flex items-center justify-center text-sm ${
+              dark ? "bg-slate-700 text-gray-400" : "bg-gray-200 text-gray-500"
+            }`}
+          >
+            Google Map will appear here
+          </div>
+        </div>
+
+        {/* 📦 Orders */}
+        <div>
+          <h3 className="font-semibold mb-3 flex items-center gap-2">
+            <Bell className="w-5 h-5 text-orange-600" />
+            New Orders
+          </h3>
+
+          {orders.length === 0 ? (
+            <p className="text-sm text-gray-500 text-center">
+              No active orders 🚴‍♂️
+            </p>
+          ) : (
+            orders.map((order) => (
+              <OrderCard
+                key={order.id}
+                order={order}
+                onAccept={acceptOrder}
+                onReject={rejectOrder}
+                dark={dark}
+              />
+            ))
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ================= ORDER CARD ================= */
+
+function OrderCard({ order, onAccept, onReject, dark }) {
+  const [timeLeft, setTimeLeft] = useState(order.time);
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const mins = Math.floor(timeLeft / 60);
+  const secs = timeLeft % 60;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-8"
+      className={`rounded-2xl shadow-lg p-5 mb-4 border transition ${
+        dark
+          ? "bg-slate-800 border-slate-700"
+          : "bg-white/90 backdrop-blur border-orange-100"
+      }`}
     >
-      {/* ================= TOP BAR ================= */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <h1 className="text-3xl font-bold">🚴 Delivery Control Center</h1>
+      <div className="flex justify-between items-start mb-3">
+        <div>
+          <p className="font-semibold">{order.customer}</p>
+          <p className="text-sm text-gray-400">{order.address}</p>
+          <p className="text-xs text-gray-500">
+            {order.distance} away
+          </p>
+        </div>
 
-        <motion.button
-          whileTap={{ scale: 0.9 }}
-          onClick={() => setOnline(!online)}
-          className={`px-6 py-2 rounded-full text-white font-semibold shadow ${
-            online ? "bg-green-600" : "bg-red-500"
-          }`}
+        <div className="flex items-center gap-1 text-orange-600 font-semibold">
+          <Clock className="w-4 h-4" />
+          {mins}:{secs.toString().padStart(2, "0")}
+        </div>
+      </div>
+
+      <div className="flex gap-3">
+        <button
+          onClick={() => onAccept(order.id)}
+          className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white py-2 rounded-xl font-semibold"
         >
-          {online ? "Shift Active 🟢" : "Shift Offline 🔴"}
-        </motion.button>
+          <CheckCircle className="w-5 h-5" /> Accept
+        </button>
+        <button
+          onClick={() => onReject(order.id)}
+          className="flex-1 flex items-center justify-center gap-2 bg-red-500 text-white py-2 rounded-xl font-semibold"
+        >
+          <XCircle className="w-5 h-5" /> Reject
+        </button>
       </div>
-
-      {/* ================= KPI METRICS ================= */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <KPI title="Assigned" value="5" />
-        <KPI title="Completed Today" value="12" />
-        <KPI title="Today's Earnings" value="₹720" />
-        <KPI title="Rating" value="⭐ 4.8" />
-      </div>
-
-      {/* ================= ACTIVE ORDERS QUEUE ================= */}
-      <motion.div
-        layout
-        className="bg-white rounded-2xl shadow p-6"
-      >
-        <h2 className="text-xl font-bold mb-4">📦 Active Orders Queue</h2>
-
-        <div className="flex gap-3 mb-6">
-          {orders.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setActiveOrder(index)}
-              className={`px-4 py-2 rounded-full text-sm font-semibold ${
-                activeOrder === index
-                  ? "bg-black text-white"
-                  : "bg-gray-200"
-              }`}
-            >
-              Order {index + 1}
-            </button>
-          ))}
-        </div>
-
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={orders[activeOrder].id}
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -30 }}
-            transition={{ duration: 0.3 }}
-            className="space-y-4"
-          >
-            <OrderDetails order={orders[activeOrder]} />
-            <OrderProgress status={orders[activeOrder].status} />
-            <OrderActions />
-          </motion.div>
-        </AnimatePresence>
-      </motion.div>
-
-      {/* ================= PERFORMANCE ================= */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <InfoCard title="Weekly Earnings" value="₹4,850" />
-        <InfoCard title="Monthly Earnings" value="₹18,900" />
-        <InfoCard title="Completion Rate" value="96%" />
-      </div>
-
-      {/* ================= ACTIVITY FEED ================= */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="bg-white rounded-2xl shadow p-6"
-      >
-        <h2 className="text-xl font-bold mb-4">📊 Recent Activity</h2>
-
-        <ul className="space-y-3">
-          <Activity text="Delivered order ORD-1198" />
-          <Activity text="Earned ₹90 incentive" />
-          <Activity text="Shift started at 9:00 AM" />
-        </ul>
-      </motion.div>
     </motion.div>
-  );
-}
-
-/* ================= SUB COMPONENTS ================= */
-
-function KPI({ title, value }) {
-  return (
-    <motion.div
-      whileHover={{ y: -6 }}
-      className="bg-gradient-to-br from-black to-gray-800 text-white p-6 rounded-2xl shadow"
-    >
-      <p className="opacity-80">{title}</p>
-      <h2 className="text-3xl font-bold">{value}</h2>
-    </motion.div>
-  );
-}
-
-function OrderDetails({ order }) {
-  return (
-    <div className="grid md:grid-cols-2 gap-4">
-      <div>
-        <p className="font-semibold">Order ID</p>
-        <p>{order.id}</p>
-      </div>
-      <div>
-        <p className="font-semibold">Customer</p>
-        <p>{order.customer}</p>
-      </div>
-      <div>
-        <p className="font-semibold">Address</p>
-        <p>{order.address}</p>
-      </div>
-      <div>
-        <p className="font-semibold">Distance</p>
-        <p>{order.distance}</p>
-      </div>
-    </div>
-  );
-}
-
-function OrderProgress({ status }) {
-  const steps = ["Assigned", "Picked", "On The Way", "Delivered"];
-
-  return (
-    <div className="flex justify-between mt-6">
-      {steps.map(step => (
-        <div key={step} className="flex-1 text-center">
-          <div
-            className={`h-2 rounded-full mx-1 ${
-              steps.indexOf(step) <= steps.indexOf(status)
-                ? "bg-green-500"
-                : "bg-gray-300"
-            }`}
-          />
-          <p className="text-xs mt-1">{step}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function OrderActions() {
-  return (
-    <div className="flex gap-3 mt-6">
-      <Action text="Picked Up" color="bg-yellow-500" />
-      <Action text="On The Way" color="bg-blue-500" />
-      <Action text="Delivered" color="bg-green-600" />
-    </div>
-  );
-}
-
-function Action({ text, color }) {
-  return (
-    <motion.button
-      whileTap={{ scale: 0.9 }}
-      className={`${color} text-white px-4 py-2 rounded-lg font-semibold shadow`}
-    >
-      {text}
-    </motion.button>
-  );
-}
-
-function InfoCard({ title, value }) {
-  return (
-    <motion.div
-      whileHover={{ scale: 1.04 }}
-      className="bg-white p-6 rounded-2xl shadow"
-    >
-      <p className="text-gray-500">{title}</p>
-      <h2 className="text-2xl font-bold">{value}</h2>
-    </motion.div>
-  );
-}
-
-function Activity({ text }) {
-  return (
-    <motion.li
-      whileHover={{ x: 6 }}
-      className="text-gray-700"
-    >
-      • {text}
-    </motion.li>
   );
 }
