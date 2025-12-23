@@ -41,7 +41,7 @@ export default function Checkout() {
 
   const fetchSavedAddresses = async () => {
     try {
-      const res = await axios.get(`${API}/api/user/profile`, {
+      const res = await axios.get(`${API}/api/users/profile`, {
         withCredentials: true,
       });
       const list = res.data.data.addresses || [];

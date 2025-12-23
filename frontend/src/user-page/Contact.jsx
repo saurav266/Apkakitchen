@@ -86,58 +86,66 @@ export default function Contact() {
             transition={{ duration: 0.7 }}
             className="space-y-6"
           >
-            {[
-              {
-                icon: MapPin,
-                title: "Our Location",
-                desc: "Ranchi, Jharkhand, India",
-              },
-              {
-                icon: Phone,
-                title: "Call Us",
-                desc: "+91 98765 43210",
-              },
-              {
-                icon: Mail,
-                title: "Email Us",
-                desc: "support@apnakitchen.com",
-              },
-            ].map((item, i) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={i}
-                  className="
-                    bg-white/90 backdrop-blur
-                    rounded-2xl p-6 shadow-lg
-                    border border-orange-100
-                    flex items-center gap-4
-                  "
-                >
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 text-white flex items-center justify-center shadow">
-                    <Icon className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-800">
-                      {item.title}
-                    </h3>
-                    <p className="text-sm text-gray-600">
-                      {item.desc}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
 
-            {/* 🗺️ Map */}
+            {/* Address */}
+            <div className="bg-white/90 backdrop-blur rounded-2xl p-6 shadow-lg border border-orange-100 flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 text-white flex items-center justify-center shadow">
+                <MapPin className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-800">
+                  Our Address
+                </h3>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  Purulia Road, Near AG Church,<br />
+                  Kanta Toli, Ranchi – 834001,<br />
+                  Jharkhand, India
+                </p>
+              </div>
+            </div>
+
+            {/* Phone Numbers */}
+            <div className="bg-white/90 backdrop-blur rounded-2xl p-6 shadow-lg border border-orange-100 flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 text-white flex items-center justify-center shadow">
+                <Phone className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-800">
+                  Call Us
+                </h3>
+                <p className="text-sm text-gray-600">
+                  +91 87099 35537<br />
+                  +91 73523 10303
+                </p>
+              </div>
+            </div>
+
+            {/* Email */}
+            <div className="bg-white/90 backdrop-blur rounded-2xl p-6 shadow-lg border border-orange-100 flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 text-white flex items-center justify-center shadow">
+                <Mail className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-800">
+                  Email Us
+                </h3>
+                <p className="text-sm text-gray-600">
+                  apkakitchen.ranchi@gmail.com
+                </p>
+              </div>
+            </div>
+
+            {/* 🗺️ Google Map */}
             <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-orange-100 h-60">
               <iframe
-                title="map"
+                title="Apna Kitchen Location"
                 className="w-full h-full border-0"
                 loading="lazy"
-                src="https://maps.google.com/maps?q=Ranchi,%20Jharkhand,%20India&t=&z=13&ie=UTF8&iwloc=&output=embed"
+                referrerPolicy="no-referrer-when-downgrade"
+                src="https://maps.google.com/maps?q=Purulia%20Road%20Near%20AG%20Church%20Kanta%20Toli%20Ranchi%20834001%20Jharkhand&t=&z=16&ie=UTF8&iwloc=&output=embed"
               ></iframe>
             </div>
+
           </motion.div>
 
         </div>

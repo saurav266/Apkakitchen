@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { ChefHat, Heart, Flame, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import chefImg from "../assets/hero-section/chef.png";
+import aboutFood from "../assets/about/hero-page.png";
 
 export default function About() {
   const navigate = useNavigate();
@@ -27,23 +27,39 @@ export default function About() {
   ];
 
   return (
-    <section className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-red-50 pt-28 pb-24">
-      <div className="max-w-7xl mx-auto px-6">
+    <section className="pt-14 w-full bg-gradient-to-br from-orange-50 via-amber-50 to-red-50">
 
-        {/* 🏷️ Hero */}
-        <motion.div
+      {/* 🍽️ IMAGE HERO */}
+      <div className="relative h-[65vh] w-full overflow-hidden">
+        <img
+          src={aboutFood}
+          alt="Delicious Indian food"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+
+        {/* Warm overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/40 to-black/60" />
+
+        {/* Glass title card */}
+        {/* <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7 }}
-          className="text-center mb-16"
+          transition={{ duration: 0.8 }}
+          className="relative z-10 h-full flex items-center justify-center px-6"
         >
-          <h1 className="text-4xl md:text-5xl font-bold">
-            About <span className="text-orange-600">Apka Kitchen</span>
-          </h1>
-          <p className="mt-4 text-gray-600 italic text-lg max-w-2xl mx-auto">
-            Serving comfort food that feels just like home.
-          </p>
-        </motion.div>
+          <div className="bg-white/15 backdrop-blur-xl border border-white/30 rounded-3xl px-10 py-8 text-center shadow-2xl">
+            <h1 className="text-4xl md:text-6xl font-bold text-white tracking-wide">
+              About <span className="text-orange-400">Apna Kitchen</span>
+            </h1>
+            <p className="mt-4 max-w-2xl text-lg md:text-xl text-white/90 italic">
+              Serving comfort food that feels just like home.
+            </p>
+          </div>
+        </motion.div> */}
+      </div>
+
+      {/* 🌟 CONTENT */}
+      <div className="max-w-7xl mx-auto px-6 pt-24 pb-24">
 
         {/* 📜 Story */}
         <div className="grid lg:grid-cols-2 gap-14 items-center mb-20">
@@ -55,7 +71,7 @@ export default function About() {
           >
             <h2 className="text-3xl font-bold mb-4 text-gray-800">Our Story</h2>
             <p className="text-gray-600 leading-relaxed mb-4">
-              Apka Kitchen began with one simple belief — food should not just
+              Apna Kitchen began with one simple belief — food should not just
               fill your stomach, it should warm your heart.
             </p>
             <p className="text-gray-600 leading-relaxed">
@@ -69,13 +85,17 @@ export default function About() {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.7 }}
-            className="flex justify-center"
+            className="bg-white/90 rounded-3xl p-8 shadow-xl border border-orange-100"
           >
-            <img
-              src={chefImg}
-              alt="Chef"
-              className="h-80 md:h-96 object-contain drop-shadow-2xl"
-            />
+            <h3 className="text-2xl font-semibold mb-4 text-gray-800">
+              Why Choose Us?
+            </h3>
+            <ul className="space-y-3 text-gray-600">
+              <li>🍛 Authentic home-style Indian recipes</li>
+              <li>🔥 Freshly cooked, never frozen</li>
+              <li>🚀 Fast & reliable delivery</li>
+              <li>❤️ Cooked with love & hygiene</li>
+            </ul>
           </motion.div>
         </div>
 

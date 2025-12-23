@@ -1,30 +1,48 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
-export default function Cart() {
+export default function CartPage() {
+  const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
   const navigate = useNavigate();
 
-  const handleCheckout = () => {
-    if (cart.length === 0) return;
-
-    const user = JSON.parse(localStorage.getItem("user"));
-    if (!user) {
-      navigate("/login");
-    } else {
-      navigate("/checkout");
-    }
-  };
-
+  // 🔹 Fetch products from backend
   useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await axios.get("http://localhost:3000/api/products");
+        setProducts(res.data.products);
+      } catch (err) {
+        console.error("Error fetching products:", err);
+      }
+    };
+    fetchProducts();
+
+    // Load cart from localStorage
     const c = JSON.parse(localStorage.getItem("cart")) || [];
     setCart(c);
   }, []);
 
+  // 🔹 Add product to cart
+  const addToCart = (product) => {
+    let c = [...cart];
+    const existing = c.find((i) => i._id === product._id);
+    if (existing) {
+      existing.qty += 1;
+    } else {
+      c.push({ ...product, qty: 1 });
+    }
+    setCart(c);
+    localStorage.setItem("cart", JSON.stringify(c));
+    window.dispatchEvent(new Event("cartUpdated"));
+  };
+
+  // 🔹 Update quantity
   const updateQty = (id, delta) => {
     let c = [...cart];
-    const item = c.find((i) => i.id === id);
+    const item = c.find((i) => i._id === id);
     if (!item) return;
 
     item.qty += delta;
@@ -35,23 +53,35 @@ export default function Cart() {
     window.dispatchEvent(new Event("cartUpdated"));
   };
 
+  // 🔹 Remove item
   const removeItem = (id) => {
-    const c = cart.filter((i) => i.id !== id);
+    const c = cart.filter((i) => i._id !== id);
     setCart(c);
     localStorage.setItem("cart", JSON.stringify(c));
     window.dispatchEvent(new Event("cartUpdated"));
   };
 
-  const total = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
+  // 🔹 Checkout
+  const handleCheckout = () => {
+    if (cart.length === 0) return;
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (!user) {
+      navigate("/login");
+    } else {
+      navigate("/checkout");
+    }
+  };
+
+  const total = cart.reduce((sum, i) => sum + i.finalPrice * i.qty, 0);
 
   return (
     <section className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-red-50 pt-28 pb-20">
-      <div className="max-w-5xl mx-auto px-6">
-
+      <div className="max-w-6xl mx-auto px-6">
         <h1 className="text-4xl font-bold mb-8 text-center">
           Your <span className="text-orange-600">Cart</span>
         </h1>
 
+        {/* 🛒 Cart Section */}
         {cart.length === 0 ? (
           <div className="text-center text-gray-600">
             <p>Your cart is empty.</p>
@@ -66,7 +96,7 @@ export default function Cart() {
           <div className="bg-white/90 rounded-2xl shadow-lg p-6">
             {cart.map((item) => (
               <motion.div
-                key={item.id}
+                key={item._id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="flex items-center gap-4 border-b py-4 last:border-b-0"
@@ -74,7 +104,7 @@ export default function Cart() {
                 {/* 🍽️ Image */}
                 <div className="w-20 h-20 rounded-xl overflow-hidden bg-orange-50 flex-shrink-0">
                   <img
-                    src={item.img || "/placeholder-food.png"}
+                    src={item.image || "/placeholder-food.png"}
                     alt={item.name}
                     className="w-full h-full object-contain hover:scale-110 transition"
                   />
@@ -83,24 +113,21 @@ export default function Cart() {
                 {/* 📝 Info */}
                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-800">{item.name}</h3>
-                  <p className="text-sm text-gray-500">
-                    ₹{item.price} each
-                  </p>
+                  <p className="text-sm text-gray-500">₹{item.finalPrice} each</p>
                 </div>
 
                 {/* 🔢 Qty + Price + Remove */}
                 <div className="flex items-center gap-4">
-                  {/* Qty */}
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => updateQty(item.id, -1)}
+                      onClick={() => updateQty(item._id, -1)}
                       className="w-8 h-8 rounded-full bg-gray-200"
                     >
                       −
                     </button>
                     <span className="font-semibold">{item.qty}</span>
                     <button
-                      onClick={() => updateQty(item.id, 1)}
+                      onClick={() => updateQty(item._id, 1)}
                       className="w-8 h-8 rounded-full bg-orange-500 text-white"
                     >
                       +
@@ -108,11 +135,11 @@ export default function Cart() {
                   </div>
 
                   <span className="w-20 text-right font-semibold text-gray-800">
-                    ₹{item.price * item.qty}
+                    ₹{item.finalPrice * item.qty}
                   </span>
 
                   <button
-                    onClick={() => removeItem(item.id)}
+                    onClick={() => removeItem(item._id)}
                     className="text-red-500 text-sm hover:underline"
                   >
                     Remove

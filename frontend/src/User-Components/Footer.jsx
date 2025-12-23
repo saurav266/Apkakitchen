@@ -46,15 +46,21 @@ export default function Footer() {
           <ul className="space-y-4 text-sm text-gray-600">
             <li className="flex gap-3">
               <MapPin className="w-5 h-5 text-orange-500 mt-0.5" />
-              <span>Ranchi, Jharkhand, India</span>
+              <span>
+                Purulia Road, Near AG Church, Kanta Toli, Ranchi – 834001, Jharkhand, India
+              </span>
             </li>
             <li className="flex gap-3">
               <Phone className="w-5 h-5 text-orange-500" />
-              <span>+91 98765 43210</span>
+              <span>+91 87099 35537</span>
+            </li>
+            <li className="flex gap-3">
+              <Phone className="w-5 h-5 text-orange-500" />
+              <span>+91 73523 10303</span>
             </li>
             <li className="flex gap-3">
               <Mail className="w-5 h-5 text-orange-500" />
-              <span>support@apnakitchen.com</span>
+              <span>apkakitchen.ranchi@gmail.com</span>
             </li>
           </ul>
         </div>

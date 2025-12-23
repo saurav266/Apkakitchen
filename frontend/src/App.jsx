@@ -2,6 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./context/ProtectedRoute.jsx";
 import UserLayout from "./layouts/UserLayout.jsx";
 import AdminLayout from "./layouts/AdminLayout.jsx";
+import { Toaster } from "react-hot-toast";
 
 // User Pages
 import Home from "./user-page/Home.jsx";
@@ -16,6 +17,7 @@ import About from "./user-page/About.jsx";
 import Contact from "./user-page/Contact.jsx";
 import CheckOut from "./user-page/CheckOut.jsx";
 import OrderSuccess from "./user-page/OrderSuccess.jsx";
+import FoodViewPage from "./user-page/FoodViewPage.jsx";
 
 // Admin Pages
 import AdminDashboard from "./Admin-pages/AdminDashboard.jsx";
@@ -33,6 +35,8 @@ import Earnings from "./Delivery-page/Earnings.jsx";
 
 function App() {
   return (
+    <>
+    <Toaster position="top-right" reverseOrder={false} />
     <Routes>
 
       {/* ================= USER ROUTES ================= */}
@@ -47,6 +51,7 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
+        <Route path="/food/:id" element={<FoodViewPage />} />
         <Route path="/order-success" element={<OrderSuccess />} />
 
         {/* 🔒 USER PROTECTED */}
@@ -114,7 +119,7 @@ function App() {
 
     </Routes>
 
-
+        </>
   );
 }
 
