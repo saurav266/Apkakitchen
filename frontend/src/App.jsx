@@ -12,20 +12,24 @@ import Register from "./user-page/Register.jsx";
 import UserProfile from "./user-page/UserProfilePage.jsx";
 import EditProfilePage from "./user-page/EditProfilePage.jsx";
 import OrderPage from "./user-page/Order.jsx";
+import About from "./user-page/About.jsx";
+import Contact from "./user-page/Contact.jsx";
+import CheckOut from "./user-page/CheckOut.jsx";
+import OrderSuccess from "./user-page/OrderSuccess.jsx";
 
 // Admin Pages
 import AdminDashboard from "./Admin-pages/AdminDashboard.jsx";
 import AdminOrders from "./Admin-pages/AdminOrders.jsx";
 import AdminDelivery from "./Admin-pages/AdminDelivery.jsx";
 import AdminUsers from "./Admin-pages/AdminUsers.jsx";
-import AdminDeliveryBoyDetails from "./Admin-pages/AdminDeliveryBoyDetails.jsx";
-
+import AdminProduct from "./Admin-pages/AdminProduct.jsx";
 
 // delivery
 import DeliveryLayout from "./layouts/DeliveryLayout.jsx";
 import DeliveryDashboard from "./Delivery-page/DeliveryDashboard.jsx";
 import DeliveryOrders from "./Delivery-page/DeliveryOrders.jsx";
-
+import Profile from "./Delivery-page/Profile.jsx";
+import Earnings from "./Delivery-page/Earnings.jsx";
 
 function App() {
   return (
@@ -41,6 +45,9 @@ function App() {
         {/* PUBLIC */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/order-success" element={<OrderSuccess />} />
 
         {/* 🔒 USER PROTECTED */}
         <Route
@@ -61,12 +68,22 @@ function App() {
           }
         />
 
-      </Route>
-      <Route path="/order" element={
+        <Route
+          path="/checkout"
+          element={
+            <ProtectedRoute allowedRoles={["user"]}>
+              <CheckOut />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route path="/order" element={
         <ProtectedRoute allowedRoles={["user"]}>
           <OrderPage />
         </ProtectedRoute>
-      } />
+      } />  
+
+      </Route>
 
       {/* ================= ADMIN ROUTES ================= */}
       <Route
@@ -80,9 +97,8 @@ function App() {
         <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="orders" element={<AdminOrders />} />
         <Route path="delivery" element={<AdminDelivery />} />
-        <Route path="delivery/:id" element={<AdminDeliveryBoyDetails />} />
         <Route path="users" element={<AdminUsers />} />
-        
+        <Route path="products" element={<AdminProduct />} />
       </Route>
 
       {/* ================= DELIVERY ROUTES ================= */}
@@ -92,7 +108,8 @@ function App() {
       >
         <Route path="dashboard" element={<DeliveryDashboard />} />
         <Route path="orders" element={<DeliveryOrders />} />
-        {/* <Route path="profile" element={<DeliveryProfile />} /> */}
+        <Route path="profile" element={<Profile/>}/>
+        <Route path="earnings" element={<Earnings/>}/>
       </Route>
 
     </Routes>

@@ -3,38 +3,16 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
 import {
+  ArrowLeft,
   Phone,
   MapPin,
-  ArrowLeft,
-  CheckCircle,
   Package,
-  Inbox,
+  CheckCircle,
 } from "lucide-react";
 import { useTheme } from "../context/Themecontext.jsx";
 
 const API = "http://localhost:3000";
 const steps = ["assigned", "picked", "onway", "delivered"];
-
-// 🧪 DEMO ORDER (offline fallback)
-const demoOrder = {
-  _id: "DEMO123456",
-  status: "assigned",
-  customer: {
-    name: "Rahul Sharma",
-    phone: "9876543210",
-  },
-  address: {
-    addressLine: "Morabadi Road, Near Park",
-    city: "Ranchi",
-    state: "Jharkhand",
-    pincode: "834001",
-  },
-  items: [
-    { name: "Chicken Biryani", qty: 1, price: 180 },
-    { name: "Butter Naan", qty: 2, price: 30 },
-  ],
-  totalAmount: 240,
-};
 
 export default function OrderDetails() {
   const { id } = useParams();
@@ -43,40 +21,22 @@ export default function OrderDetails() {
 
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [offline, setOffline] = useState(false);
   const [updating, setUpdating] = useState(false);
 
   const fetchOrder = async () => {
     try {
-      setLoading(true);
       const res = await axios.get(`${API}/api/delivery/orders/${id}`, {
         withCredentials: true,
       });
-
-      if (res.data?.order) {
-        setOrder(res.data.order);
-        setOffline(false);
-      } else {
-        // no order from backend → show demo
-        setOrder(demoOrder);
-        setOffline(true);
-      }
+      setOrder(res.data.order);
     } catch (err) {
-      console.warn("Backend not available, using demo order");
-      setOrder(demoOrder);
-      setOffline(true);
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
   const updateStatus = async (status) => {
-    if (offline) {
-      // 🔄 Offline demo update
-      setOrder((prev) => ({ ...prev, status }));
-      return;
-    }
-
     try {
       setUpdating(true);
       await axios.patch(
@@ -108,24 +68,19 @@ export default function OrderDetails() {
     );
   }
 
-  // ❌ Still no order
   if (!order) {
     return (
       <div
-        className={`min-h-screen flex flex-col items-center justify-center text-center px-4 ${
+        className={`min-h-screen flex flex-col items-center justify-center ${
           dark ? "bg-slate-900 text-white" : "bg-orange-50 text-gray-700"
         }`}
       >
-        <Inbox className="w-16 h-16 text-orange-500 mb-4" />
-        <h2 className="text-2xl font-bold mb-2">No Orders Yet</h2>
-        <p className="text-sm mb-6">
-          You’re online. New orders will appear here soon.
-        </p>
+        <p>No order found.</p>
         <button
-          onClick={() => navigate("/delivery/dashboard")}
-          className="px-6 py-3 rounded-xl bg-gradient-to-r from-orange-600 to-red-600 text-white font-semibold"
+          onClick={() => navigate(-1)}
+          className="mt-4 px-6 py-2 rounded-xl bg-orange-600 text-white"
         >
-          Back to Dashboard
+          Go Back
         </button>
       </div>
     );
@@ -144,7 +99,7 @@ export default function OrderDetails() {
     >
       <div className="max-w-md mx-auto space-y-6">
 
-        {/* Header */}
+        {/* 🔙 Header */}
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}
@@ -161,14 +116,7 @@ export default function OrderDetails() {
           </h2>
         </div>
 
-        {/* Offline badge */}
-        {offline && (
-          <div className="text-xs text-center text-yellow-600 bg-yellow-100 rounded-lg py-2">
-            Offline Demo Mode — Backend not connected
-          </div>
-        )}
-
-        {/* Order Card */}
+        {/* 📦 Order Card */}
         <div
           className={`rounded-3xl p-6 shadow-xl border ${
             dark
@@ -183,6 +131,7 @@ export default function OrderDetails() {
             </p>
           </div>
 
+          {/* 👤 Customer */}
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center">
               <Phone size={18} />
@@ -195,6 +144,7 @@ export default function OrderDetails() {
             </div>
           </div>
 
+          {/* 📍 Address */}
           <div className="flex items-start gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center mt-1">
               <MapPin size={18} />
@@ -205,6 +155,7 @@ export default function OrderDetails() {
             </p>
           </div>
 
+          {/* 🧾 Items */}
           <div className="border-t border-gray-200/20 pt-3 space-y-2 text-sm">
             {order.items.map((item, i) => (
               <div key={i} className="flex justify-between">
@@ -222,7 +173,7 @@ export default function OrderDetails() {
           </div>
         </div>
 
-        {/* Progress */}
+        {/* 🚚 Progress */}
         <div
           className={`rounded-3xl p-6 shadow-xl border ${
             dark
@@ -257,13 +208,14 @@ export default function OrderDetails() {
           </div>
 
           {nextStatus ? (
-            <button
+            <motion.button
+              whileTap={{ scale: 0.96 }}
               disabled={updating}
               onClick={() => updateStatus(nextStatus)}
               className="w-full py-3 rounded-xl bg-gradient-to-r from-orange-600 to-red-600 text-white font-semibold shadow-lg disabled:opacity-60"
             >
               {updating ? "Updating..." : `Mark as ${nextStatus}`}
-            </button>
+            </motion.button>
           ) : (
             <div className="text-center font-semibold text-green-500">
               🎉 Delivered Successfully

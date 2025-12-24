@@ -7,7 +7,7 @@ export default function UserLayout() {
       <Navbar />
 
       {/* Main page content */}
-      <main className="pt-20 relative z-10">
+      <main className=" relative z-10">
         <Outlet />
       </main>
     </>
