@@ -6,6 +6,9 @@ import Order from "../model/orderSchema.js";
 import jwt from "jsonwebtoken";
 import User from "../model/userSchema.js";
 import DeliveryBoy from "../model/deliveryBoySchema.js";
+import { io }  from "../server.js";
+import crypto from "crypto";
+
 const DATABASE_URL = "mongodb://127.0.0.1:27017/Apkakitchen"
 // const createAdmin = async () => {
 //   try {
@@ -56,7 +59,7 @@ export const loginAdmin = async (req, res) => {
     if (!admin) {
       return res.status(401).json({
         success: false,
-        message: "Invalid email or password",
+        message: "Invalid email or password for admin",
       });
     }
 
@@ -64,7 +67,7 @@ export const loginAdmin = async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        message: "Invalid email or password",
+        message: "Invalid email or password for admin",
       });
     }
 
@@ -443,6 +446,189 @@ export const deleteDeliveryBoy = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Server error while deleting delivery boy"
+    });
+  }
+};
+
+// for order
+// fecth orders
+export const getOrdersForDeliveryBoy = async (req, res) => {
+  try {
+    const deliveryBoyId = req.user.id;
+
+    const orders = await Order.find({ deliveryBoyId })
+      .populate("userId", "name phone")
+      .sort({ createdAt: -1 });
+
+    res.json({ success: true, orders });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch orders"
+    });
+  }
+}
+
+export const getAllOrders = async (req, res) => {
+  try {
+    const orders = await Order.find()
+      .populate({
+        path: "userId",
+        select: "name +phone" // 👈 FORCE phone
+      })
+      .populate({
+        path: "deliveryBoy",
+        select: "name phone status vehicleNumber"
+      })
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      orders
+    });
+  } catch (error) {
+    console.error("getAllOrders error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch orders"
+    });
+  }
+};
+
+
+export const getOrderById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const order = await Order.findById(id)
+      .populate("userId", "name phone address")
+      .populate("deliveryBoy", "name phone vehicleNumber status");
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
+    }
+
+    res.json({
+      success: true,
+      order
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch order"
+    });
+  }
+};
+export const assignDeliveryBoy = async (req, res) => {
+  try {
+    const { id } = req.params;            // order id
+    const { deliveryBoy } = req.body;     // delivery boy id
+
+    console.log("📦 Assigning to delivery boy:", deliveryBoy);
+
+    const order = await Order.findById(id);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
+    }
+
+    // Assign
+    order.deliveryBoy = deliveryBoy;
+     order.orderStatus = "assigned";   // ✅ IMPORTANT
+    await order.save();
+
+    // Mark delivery boy busy
+    await DeliveryBoy.findByIdAndUpdate(deliveryBoy, {
+      status: "busy"
+    });
+
+    // 🔥 POPULATE ORDER (CRITICAL)
+    const populatedOrder = await Order.findById(order._id)
+      .populate("userId", "name phone");
+
+    // 🔥 EMIT TO CORRECT DELIVERY ROOM
+    console.log("📤 Emitting socket to:", `delivery_${deliveryBoy}`);
+
+    io.to(`delivery_${deliveryBoy}`).emit(
+      "order-assigned",
+      populatedOrder
+    );
+
+    res.json({
+      success: true,
+      message: "Delivery boy assigned",
+      order: populatedOrder
+    });
+
+  } catch (error) {
+    console.error("ASSIGN DELIVERY ERROR:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
+
+
+
+export const getDeliveryBoys = async (req, res) => {
+  try {
+    const deliveryBoys = await DeliveryBoy.find({
+      role: "delivery",
+      isActive: true,
+      status: "available"
+    }).select("name phone status vehicleNumber");
+
+    res.json({
+      success: true,
+      deliveryBoys
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch delivery boys"
+    });
+  }
+};
+
+export const updateOrderStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+    const order = await Order.findById(req.params.id).populate("deliveryBoy");
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
+    }
+
+    order.orderStatus = status;
+    await order.save();
+
+    /* If delivered or cancelled → free delivery boy */
+    if (
+      ["delivered", "cancelled"].includes(status) &&
+      order.deliveryBoy
+    ) {
+      order.deliveryBoy.status = "available";
+      await order.deliveryBoy.save();
+    }
+
+    res.json({
+      success: true,
+      message: "Order status updated",
+      order
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Server error"
     });
   }
 };

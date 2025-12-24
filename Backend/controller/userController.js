@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import User from "../model/userSchema.js";
+import Order from "../model/orderSchema.js";
 import jwt from "jsonwebtoken";
 import {
   sendVerificationCode,
@@ -226,6 +227,7 @@ export const loginUser = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        role: user.role
       },
     });
   } catch (err) {
@@ -625,6 +627,33 @@ export const setCurrentAddress = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message
+    });
+  }
+};
+
+
+// my order
+export const getMyOrders = async (req, res) => {
+  try {
+    if (req.user.role !== "user") {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied",
+      });
+    }
+
+    const orders = await Order.find({ userId: req.user.id })
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      orders,
+    });
+  } catch (error) {
+    console.error("GET MY ORDERS ERROR:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch orders",
     });
   }
 };

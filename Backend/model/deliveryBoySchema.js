@@ -1,55 +1,44 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
-/**
- * Delivery Boy Schema
- * Single Restaurant System
- * Role-Based Access Included
- * 
- */
-
-const addressSchema = new mongoose.Schema(
+/* ================= EARNINGS ================= */
+const earningSchema = new mongoose.Schema(
   {
-    addressLine: {
-      type: String,
+    orderId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Order",
       required: true
     },
-    city: {
-      type: String,
+    amount: {
+      type: Number,
       required: true
     },
-    state: {
-      type: String,
-      required: true
-    },
-    pincode: {
-      type: String,
-      required: true
+    date: {
+      type: Date,
+      default: Date.now
     }
   },
   { _id: false }
 );
 
+/* ================= ADDRESS ================= */
+const addressSchema = new mongoose.Schema(
+  {
+    addressLine: { type: String, required: true },
+    city: { type: String, required: true },
+    state: { type: String, required: true },
+    pincode: { type: String, required: true }
+  },
+  { _id: false }
+);
+
+/* ================= DELIVERY BOY ================= */
 const deliveryBoySchema = new mongoose.Schema(
   {
     /* ================= BASIC PROFILE ================= */
-    name: {
-      type: String,
-      required: true,
-      trim: true
-    },
-
-    phone: {
-      type: String,
-      required: true,
-      unique: true
-    },
-
-    email: {
-      type: String,
-      unique: true,
-      sparse: true
-    },
+    name: { type: String, required: true, trim: true },
+    phone: { type: String, required: true, unique: true },
+    email: { type: String, unique: true, sparse: true },
 
     /* ================= ROLE ================= */
     role: {
@@ -72,38 +61,14 @@ const deliveryBoySchema = new mongoose.Schema(
       required: true,
       match: [/^\d{4}$/, "Aadhaar must be last 4 digits"]
     },
-
     aadhaarNumber: {
       type: String,
       select: false
     },
 
     /* ================= ADDRESSES ================= */
-    currentAddress: {
-      type: addressSchema,
-      required: true
-    },
-
-    permanentAddress: {
-      type: addressSchema,
-      required: true
-    },
-
-    /* ================= VERIFICATION ================= */
-    isVerified: {
-      type: Boolean,
-      default: false
-    },
-
-    emailOtp: {
-      type: String,
-      select: false
-    },
-
-    emailOtpExpiry: {
-      type: Date,
-      select: false
-    },
+    currentAddress: addressSchema,
+    permanentAddress: addressSchema,
 
     /* ================= VEHICLE ================= */
     vehicleNumber: {
@@ -118,32 +83,34 @@ const deliveryBoySchema = new mongoose.Schema(
       default: "offline"
     },
 
-    /* ================= ACCOUNT CONTROL ================= */
-    isActive: {
-      type: Boolean,
-      default: true
+    /* ================= EARNINGS SYSTEM ================= */
+    totalEarnings: {
+      type: Number,
+      default: 0
     },
 
-    lastLogin: {
-      type: Date
-    }
+    earningsHistory: {
+      type: [earningSchema],
+      default: []
+    },
+
+    /* ================= ACCOUNT CONTROL ================= */
+    isVerified: { type: Boolean, default: false },
+    isActive: { type: Boolean, default: true },
+    lastLogin: { type: Date }
   },
   {
     timestamps: true
   }
 );
 
-/* =====================================================
-   🔐 HASH PASSWORD BEFORE SAVE
-===================================================== */
+/* ================= PASSWORD HASH ================= */
 deliveryBoySchema.pre("save", async function () {
   if (!this.isModified("password")) return;
   this.password = await bcrypt.hash(this.password, 10);
 });
 
-/* =====================================================
-   🔑 COMPARE PASSWORD
-===================================================== */
+/* ================= PASSWORD COMPARE ================= */
 deliveryBoySchema.methods.comparePassword = async function (enteredPassword) {
   return bcrypt.compare(enteredPassword, this.password);
 };

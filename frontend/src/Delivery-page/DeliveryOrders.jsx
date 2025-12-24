@@ -1,275 +1,150 @@
-import { useParams, useNavigate } from "react-router-dom";
+// pages/DeliveredOrders.jsx
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { motion } from "framer-motion";
-import {
-  Phone,
-  MapPin,
-  ArrowLeft,
-  CheckCircle,
-  Package,
-  Inbox,
-} from "lucide-react";
+import { Package } from "lucide-react";
 import { useTheme } from "../context/Themecontext.jsx";
 
 const API = "http://localhost:3000";
-const steps = ["assigned", "picked", "onway", "delivered"];
 
-// 🧪 DEMO ORDER (offline fallback)
-const demoOrder = {
-  _id: "DEMO123456",
-  status: "assigned",
-  customer: {
-    name: "Rahul Sharma",
-    phone: "9876543210",
-  },
-  address: {
-    addressLine: "Morabadi Road, Near Park",
-    city: "Ranchi",
-    state: "Jharkhand",
-    pincode: "834001",
-  },
-  items: [
-    { name: "Chicken Biryani", qty: 1, price: 180 },
-    { name: "Butter Naan", qty: 2, price: 30 },
-  ],
-  totalAmount: 240,
-};
+const formatDate = (date) =>
+  new Date(date).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric"
+  });
 
-export default function OrderDetails() {
-  const { id } = useParams();
-  const navigate = useNavigate();
+const formatTime = (date) =>
+  new Date(date).toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+
+export default function DeliveredOrders() {
   const { dark } = useTheme();
+  const navigate = useNavigate();
 
-  const [order, setOrder] = useState(null);
+  const [orders, setOrders] = useState([]);
+  const [filter, setFilter] = useState("today");
   const [loading, setLoading] = useState(true);
-  const [offline, setOffline] = useState(false);
-  const [updating, setUpdating] = useState(false);
 
-  const fetchOrder = async () => {
+  const fetchOrders = async (selectedFilter) => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API}/api/delivery/orders/${id}`, {
-        withCredentials: true,
-      });
-
-      if (res.data?.order) {
-        setOrder(res.data.order);
-        setOffline(false);
-      } else {
-        // no order from backend → show demo
-        setOrder(demoOrder);
-        setOffline(true);
-      }
-    } catch (err) {
-      console.warn("Backend not available, using demo order");
-      setOrder(demoOrder);
-      setOffline(true);
-    } finally {
+      const res = await axios.get(
+        `${API}/api/delivery/orders/delivered?filter=${selectedFilter}`,
+        { withCredentials: true }
+      );
+      setOrders(res.data.orders || []);
+      setLoading(false);
+    } catch {
       setLoading(false);
     }
   };
 
-  const updateStatus = async (status) => {
-    if (offline) {
-      // 🔄 Offline demo update
-      setOrder((prev) => ({ ...prev, status }));
-      return;
-    }
-
-    try {
-      setUpdating(true);
-      await axios.patch(
-        `${API}/api/delivery/orders/${id}/status`,
-        { status },
-        { withCredentials: true }
-      );
-      fetchOrder();
-    } catch {
-      alert("Failed to update status");
-    } finally {
-      setUpdating(false);
-    }
-  };
-
   useEffect(() => {
-    fetchOrder();
-  }, [id]);
-
-  if (loading) {
-    return (
-      <div
-        className={`min-h-screen flex items-center justify-center ${
-          dark ? "bg-slate-900 text-orange-400" : "bg-orange-50 text-orange-600"
-        }`}
-      >
-        Loading order...
-      </div>
-    );
-  }
-
-  // ❌ Still no order
-  if (!order) {
-    return (
-      <div
-        className={`min-h-screen flex flex-col items-center justify-center text-center px-4 ${
-          dark ? "bg-slate-900 text-white" : "bg-orange-50 text-gray-700"
-        }`}
-      >
-        <Inbox className="w-16 h-16 text-orange-500 mb-4" />
-        <h2 className="text-2xl font-bold mb-2">No Orders Yet</h2>
-        <p className="text-sm mb-6">
-          You’re online. New orders will appear here soon.
-        </p>
-        <button
-          onClick={() => navigate("/delivery/dashboard")}
-          className="px-6 py-3 rounded-xl bg-gradient-to-r from-orange-600 to-red-600 text-white font-semibold"
-        >
-          Back to Dashboard
-        </button>
-      </div>
-    );
-  }
-
-  const currentIndex = steps.indexOf(order.status);
-  const nextStatus = steps[currentIndex + 1];
+    fetchOrders(filter);
+  }, [filter]);
 
   return (
     <section
-      className={`min-h-screen pb-24 px-4 pt-6 ${
-        dark
-          ? "bg-slate-900 text-white"
-          : "bg-gradient-to-br from-orange-50 via-amber-50 to-red-50 text-gray-800"
+      className={`min-h-screen p-4 ${
+        dark ? "bg-slate-900 text-white" : "bg-orange-50"
       }`}
     >
-      <div className="max-w-md mx-auto space-y-6">
+      <div className="max-w-md mx-auto space-y-4">
 
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate(-1)}
-            className={`p-2 rounded-full shadow ${
-              dark
-                ? "bg-slate-800 text-orange-400"
-                : "bg-white text-orange-600"
-            }`}
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <h2 className="text-xl font-bold">
-            Order <span className="text-orange-600">Details</span>
-          </h2>
-        </div>
+        {/* HEADER */}
+        <h2 className="text-xl font-bold">
+          Delivered <span className="text-orange-600">Orders</span>
+        </h2>
 
-        {/* Offline badge */}
-        {offline && (
-          <div className="text-xs text-center text-yellow-600 bg-yellow-100 rounded-lg py-2">
-            Offline Demo Mode — Backend not connected
-          </div>
-        )}
-
-        {/* Order Card */}
-        <div
-          className={`rounded-3xl p-6 shadow-xl border ${
-            dark
-              ? "bg-slate-800 border-slate-700"
-              : "bg-white/90 backdrop-blur border-orange-100"
-          }`}
-        >
-          <div className="flex items-center gap-2 mb-3 text-orange-500">
-            <Package size={18} />
-            <p className="text-sm font-semibold">
-              Order #{order._id.slice(-6)}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center">
-              <Phone size={18} />
-            </div>
-            <div>
-              <p className="font-semibold">{order.customer.name}</p>
-              <p className="text-sm text-gray-400">
-                {order.customer.phone}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center mt-1">
-              <MapPin size={18} />
-            </div>
-            <p className="text-sm text-gray-400">
-              {order.address.addressLine}, {order.address.city},{" "}
-              {order.address.state} - {order.address.pincode}
-            </p>
-          </div>
-
-          <div className="border-t border-gray-200/20 pt-3 space-y-2 text-sm">
-            {order.items.map((item, i) => (
-              <div key={i} className="flex justify-between">
-                <span>
-                  {item.name} × {item.qty}
-                </span>
-                <span>₹{item.price * item.qty}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex justify-between font-bold mt-3 text-orange-600">
-            <span>Total</span>
-            <span>₹{order.totalAmount}</span>
-          </div>
-        </div>
-
-        {/* Progress */}
-        <div
-          className={`rounded-3xl p-6 shadow-xl border ${
-            dark
-              ? "bg-slate-800 border-slate-700"
-              : "bg-white/90 backdrop-blur border-orange-100"
-          }`}
-        >
-          <h3 className="font-semibold mb-4">
-            Delivery <span className="text-orange-600">Progress</span>
-          </h3>
-
-          <div className="flex justify-between mb-5">
-            {steps.map((s, i) => {
-              const done = i <= currentIndex;
-              return (
-                <div key={s} className="flex flex-col items-center flex-1">
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      done
-                        ? "bg-gradient-to-r from-orange-500 to-red-600 text-white"
-                        : dark
-                        ? "bg-slate-700 text-gray-400"
-                        : "bg-gray-200 text-gray-500"
-                    }`}
-                  >
-                    {done ? <CheckCircle size={16} /> : i + 1}
-                  </div>
-                  <p className="text-[10px] mt-1 capitalize">{s}</p>
-                </div>
-              );
-            })}
-          </div>
-
-          {nextStatus ? (
+        {/* FILTER BUTTONS */}
+        <div className="flex gap-2">
+          {["today", "week", "month"].map(f => (
             <button
-              disabled={updating}
-              onClick={() => updateStatus(nextStatus)}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-orange-600 to-red-600 text-white font-semibold shadow-lg disabled:opacity-60"
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-4 py-1 rounded-full text-sm font-semibold transition
+                ${
+                  filter === f
+                    ? "bg-orange-600 text-white"
+                    : dark
+                      ? "bg-slate-700 text-gray-300"
+                      : "bg-orange-100 text-orange-600"
+                }
+              `}
             >
-              {updating ? "Updating..." : `Mark as ${nextStatus}`}
+              {f.toUpperCase()}
             </button>
-          ) : (
-            <div className="text-center font-semibold text-green-500">
-              🎉 Delivered Successfully
-            </div>
-          )}
+          ))}
         </div>
+
+        {/* CONTENT */}
+        {loading ? (
+          <p className="text-center text-sm text-gray-400">
+            Loading delivered orders...
+          </p>
+        ) : orders.length === 0 ? (
+          <p className="text-sm text-gray-400">
+            No delivered orders
+          </p>
+        ) : (
+          orders.map(order => (
+            <div
+              key={order._id}
+              className={`rounded-xl p-4 shadow ${
+                dark ? "bg-slate-800" : "bg-white"
+              }`}
+            >
+              <div className="flex justify-between items-center">
+
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-green-100 text-green-600 flex items-center justify-center">
+                    <Package size={18} />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm">
+                      Order #{order._id.slice(-6)}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {new Date(order.updatedAt).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="text-right space-y-1">
+  <p className="font-bold text-orange-600">
+    ₹{order.totalAmount}
+  </p>
+
+  <p className="text-xs text-gray-400">
+    {formatDate(order.updatedAt)}
+  </p>
+
+  <p className="text-xs text-gray-400">
+    {formatTime(order.updatedAt)}
+  </p>
+
+  <span className="inline-block text-xs px-2 py-0.5
+                   bg-green-100 text-green-700 rounded-full font-semibold">
+    DELIVERED
+  </span>
+</div>
+
+              </div>
+
+              <button
+                onClick={() =>
+                  navigate(`/delivery/orders/${order._id}`)
+                }
+                className="mt-3 w-full py-2 rounded-xl bg-orange-600 text-white font-semibold"
+              >
+                View Order Details
+              </button>
+            </div>
+          ))
+        )}
       </div>
     </section>
   );

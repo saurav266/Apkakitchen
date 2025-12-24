@@ -112,21 +112,18 @@ export const unifiedLogin = async (req, res) => {
       });
     }
 
-    // 🔎 ADMIN (highest priority)
-    const admin = await Admin.findOne({ email }).select("+password");
-    if (admin) {
+    // ADMIN
+    if (await Admin.exists({ email })) {
       return loginAdmin(req, res);
     }
 
-    // 🔎 DELIVERY
-    const deliveryBoy = await DeliveryBoy.findOne({ email }).select("+password");
-    if (deliveryBoy) {
+    // DELIVERY
+    if (await DeliveryBoy.exists({ email })) {
       return loginDeliveryBoy(req, res);
     }
 
-    // 🔎 USER
-    const user = await User.findOne({ email }).select("+password");
-    if (user) {
+    // USER
+    if (await User.exists({ email })) {
       return loginUser(req, res);
     }
 
@@ -136,11 +133,40 @@ export const unifiedLogin = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: "Login failed",
-      error: error.message
+      message: "Login failed"
     });
   }
 };
+
+export const getProfile = async (req, res) => {
+  const { id, role } = req.user; // from JWT
+
+  let user;
+  if (role === "admin") {
+    user = await Admin.findById(id);
+  } else if (role === "delivery") {
+    user = await DeliveryBoy.findById(id);
+  } else {
+    user = await User.findById(id);
+  }
+
+  if (!user) {
+    return res.status(404).json({ success: false });
+  }
+
+  res.json({
+    success: true,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role
+    }
+  });
+};
+
+
+
 

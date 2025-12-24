@@ -4,6 +4,8 @@ import chefImg from "../assets/login/chef-img.png";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 
+
+
 export default function Login() {
   const navigate = useNavigate();
 
@@ -37,12 +39,14 @@ export default function Login() {
       window.dispatchEvent(new Event("authChanged"));
 
       if (data.user.role === "admin") {
-        navigate("/admin/dashboard");
-      } else if (data.user.role === "delivery") {
-        navigate("/delivery/orders");
-      } else {
-        navigate("/");
-      }
+  setTimeout(() => navigate("/admin/dashboard"), 50);
+} else if (data.user.role === "delivery") {
+  setTimeout(() => navigate("/delivery/orders"), 50);
+} else {
+  setTimeout(() => navigate("/"), 50);
+}
+      
+
     } catch (err) {
       alert("Server not reachable");
     } finally {

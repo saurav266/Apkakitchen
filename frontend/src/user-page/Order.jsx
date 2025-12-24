@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import axios from "axios";
-
+const API =import.meta.env.VITE_API_URL || "http://localhost:3000";
 export default function UserOrdersPage() {
   const [orders, setOrders] = useState([]);
   const [expanded, setExpanded] = useState(null);
@@ -15,7 +15,7 @@ export default function UserOrdersPage() {
   const fetchOrders = async () => {
     try {
       const { data } = await axios.get(
-        "/api/orders/my-orders",
+        `${API}/api/users/my-orders`,
         { withCredentials: true }
       );
       if (data.success) setOrders(data.orders);

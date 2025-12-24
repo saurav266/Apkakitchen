@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { MapPin, Phone, CreditCard, Banknote } from "lucide-react";
 import axios from "axios";
 
-const API = "http://localhost:3000";
+const API =import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 export default function Checkout() {
   const navigate = useNavigate();
@@ -41,7 +41,7 @@ export default function Checkout() {
 
   const fetchSavedAddresses = async () => {
     try {
-      const res = await axios.get(`${API}/api/user/profile`, {
+      const res = await axios.get(`${API}/api/users/profile`, {
         withCredentials: true,
       });
       const list = res.data.data.addresses || [];
@@ -102,32 +102,41 @@ export default function Checkout() {
   /* ================= PLACE ORDER ================= */
 
   const placeOrder = async () => {
-    if (!name || !phone || !addressLine || !city || !state || !pincode) {
-      alert("Please fill complete address");
-      return;
-    }
+  if (!name || !phone || !addressLine || !city || !state || !pincode) {
+    alert("Please fill complete address");
+    return;
+  }
 
-    setLoading(true);
-    try {
-      console.log("Order payload:", {
-        name,
-        phone,
-        addressLine,
-        city,
-        state,
-        pincode,
-        payment,
-        items: cart,
-        total,
-      });
+  setLoading(true);
+  try {
+    await axios.post(
+      `${API}/api/order/create`,
+      {
+        customerName: name,          // ✅ MATCHES SCHEMA
+        customerPhone: phone,        // ✅ MATCHES SCHEMA
+        items: cart.map(i => ({
+          productId: i._id,
+          name: i.name,
+          quantity: i.qty,
+          price: i.price
+        })),
+        totalAmount: total,
+        paymentMethod: payment === "cod" ? "COD" : "Online",
+        deliveryAddress: `${addressLine}, ${city}, ${state} - ${pincode}`
+      },
+      { withCredentials: true }
+    );
 
-      alert("Order request sent (connect backend next)");
-    } catch {
-      alert("Failed to place order");
-    } finally {
-      setLoading(false);
-    }
-  };
+    localStorage.removeItem("cart");
+    navigate("/orders/success");
+  } catch (err) {
+    alert(err.response?.data?.message || "Order failed");
+  } finally {
+    setLoading(false);
+  }
+};
+
+
 
   return (
     <section className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-red-50 pt-28 pb-16">

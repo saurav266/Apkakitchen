@@ -1,5 +1,5 @@
 import express from "express";
-import { resetPassword,forgotPassword,getUserProfile} from "../controller/userController.js";
+import { resetPassword,forgotPassword,getUserProfile,getMyOrders} from "../controller/userController.js";
 import { protect,authorizeRoles } from "../middleware/authMiddleware.js";
 import {addAddress,
   updateAddress,
@@ -13,6 +13,7 @@ const router = express.Router();
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password/:token", resetPassword);
 router.get("/profile",protect, getUserProfile);
+router.get("/my-orders", protect, getMyOrders);
 
 // for addressing CORS issues with cookies
 router.post("/address", protect, authorizeRoles("user"), addAddress);

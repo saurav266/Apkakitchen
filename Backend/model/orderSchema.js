@@ -8,7 +8,18 @@ const orderSchema = new mongoose.Schema(
       required: true
     },
 
-    deliveryBoyId: {
+    // 🔹 SNAPSHOT CUSTOMER DATA
+    customerName: {
+      type: String,
+      required: true
+    },
+
+    customerPhone: {
+      type: String,
+      required: true
+    },
+
+    deliveryBoy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "DeliveryBoy"
     },
@@ -43,16 +54,18 @@ const orderSchema = new mongoose.Schema(
     },
 
     orderStatus: {
-      type: String,
-      enum: [
-        "placed",
-        "preparing",
-        "out_for_delivery",
-        "delivered",
-        "cancelled"
-      ],
-      default: "placed"
-    },
+  type: String,
+  enum: [
+    "placed",
+    "preparing",
+    "assigned",        // ✅ ADD THIS
+    "out_for_delivery",
+    "delivered",
+    "cancelled"
+  ],
+  default: "placed"
+},
+
 
     deliveryAddress: {
       type: String,

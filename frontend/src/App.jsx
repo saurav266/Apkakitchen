@@ -23,6 +23,8 @@ import AdminOrders from "./Admin-pages/AdminOrders.jsx";
 import AdminDelivery from "./Admin-pages/AdminDelivery.jsx";
 import AdminUsers from "./Admin-pages/AdminUsers.jsx";
 import AdminProduct from "./Admin-pages/AdminProduct.jsx";
+import AdminDeliveryBoyDetails from "./Admin-pages/AdminDeliveryBoyDetails.jsx";
+import AdminOrderDetails from "./Admin-pages/AdminOrderDetails.jsx";
 
 // delivery
 import DeliveryLayout from "./layouts/DeliveryLayout.jsx";
@@ -30,6 +32,7 @@ import DeliveryDashboard from "./Delivery-page/DeliveryDashboard.jsx";
 import DeliveryOrders from "./Delivery-page/DeliveryOrders.jsx";
 import Profile from "./Delivery-page/Profile.jsx";
 import Earnings from "./Delivery-page/Earnings.jsx";
+import OrderDetails from "./Delivery-page/OrderDetails.jsx";
 
 function App() {
   return (
@@ -96,7 +99,9 @@ function App() {
       >
         <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="orders" element={<AdminOrders />} />
+        <Route path="orders/:id" element={<AdminOrderDetails />} />
         <Route path="delivery" element={<AdminDelivery />} />
+        <Route path="delivery/:id" element={<AdminDeliveryBoyDetails />} />
         <Route path="users" element={<AdminUsers />} />
         <Route path="products" element={<AdminProduct />} />
       </Route>
@@ -104,10 +109,16 @@ function App() {
       {/* ================= DELIVERY ROUTES ================= */}
       <Route
         path="/delivery"
-        element={<DeliveryLayout />}
+        element={
+          <ProtectedRoute allowedRoles={["delivery"]}>
+
+        <DeliveryLayout />
+          </ProtectedRoute>
+      }
       >
         <Route path="dashboard" element={<DeliveryDashboard />} />
         <Route path="orders" element={<DeliveryOrders />} />
+        <Route path="/delivery/orders/:id" element={<OrderDetails />} />
         <Route path="profile" element={<Profile/>}/>
         <Route path="earnings" element={<Earnings/>}/>
       </Route>

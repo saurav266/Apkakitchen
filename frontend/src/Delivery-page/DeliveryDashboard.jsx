@@ -1,72 +1,132 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import {
-  MapPin,
-  Clock,
-  IndianRupee,
-  Bell,
-  Power,
-  CheckCircle,
-  XCircle,
-} from "lucide-react";
+import axios from "axios";
+import { socket } from "../socket";
 import { useTheme } from "../context/Themecontext.jsx";
+import { Bell, Power, IndianRupee } from "lucide-react";
+
+const API = "http://localhost:3000";
 
 export default function DeliveryDashboard() {
   const { dark } = useTheme();
 
-  const [online, setOnline] = useState(true);
-  const [orders, setOrders] = useState([
-    {
-      id: 1,
-      customer: "Rohit Sharma",
-      address: "Main Road, Ranchi",
-      distance: "3.2 km",
-      time: 18 * 60,
-    },
-  ]);
-  const [earnings, setEarnings] = useState(420);
+  const [orders, setOrders] = useState([]);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [online, setOnline] = useState(false);
+  const [earnings, setEarnings] = useState(0);
 
-  // 🔔 sound + vibration on new order
-  useEffect(() => {
-    if (orders.length > 0) {
-      const audio = new Audio("/sounds/notify.mp3");
-      audio.play().catch(() => {});
-      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+  /* ================= FETCH ORDERS ================= */
+  const fetchOrders = async () => {
+    try {
+      const res = await axios.get(
+        `${API}/api/delivery/orders/assigned`,
+        { withCredentials: true }
+      );
+      setOrders(res.data.orders || []);
+    } catch {
+      console.error("Failed to fetch orders");
     }
-  }, [orders]);
-
-  const acceptOrder = (id) => {
-    alert("Order accepted!");
   };
 
-  const rejectOrder = (id) => {
-    setOrders((prev) => prev.filter((o) => o.id !== id));
+  /* ================= FETCH EARNINGS ================= */
+  const fetchEarnings = async () => {
+    try {
+      const res = await axios.get(
+        `${API}/api/delivery/earnings`,
+        { withCredentials: true }
+      );
+      setEarnings(res.data.todayEarnings || 0);
+    } catch {
+      console.error("Failed to fetch earnings");
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+    fetchEarnings();
+  }, []);
+
+  /* ================= SOCKET ================= */
+  useEffect(() => {
+    socket.on("order-assigned", (order) => {
+      setOrders(prev => {
+        const exists = prev.find(o => o._id === order._id);
+        if (exists) return prev;
+        return [order, ...prev];
+      });
+    });
+
+    return () => socket.off("order-assigned");
+  }, []);
+
+  /* ================= ONLINE / OFFLINE ================= */
+  const toggleOnline = async () => {
+    try {
+      const newStatus = online ? "offline" : "available";
+      await axios.patch(
+        `${API}/api/delivery/status`,
+        { status: newStatus },
+        { withCredentials: true }
+      );
+      setOnline(!online);
+    } catch {
+      alert("Failed to update status");
+    }
+  };
+
+  /* ================= ACCEPT ================= */
+  const acceptOrder = async (orderId) => {
+    await axios.post(
+      `${API}/api/delivery/orders/${orderId}/accept`,
+      {},
+      { withCredentials: true }
+    );
+    fetchOrders();
+  };
+
+  /* ================= REJECT ================= */
+  const rejectOrder = async (orderId) => {
+    await axios.post(
+      `${API}/api/delivery/orders/${orderId}/reject`,
+      {},
+      { withCredentials: true }
+    );
+    setOrders(prev => prev.filter(o => o._id !== orderId));
+  };
+
+  /* ================= DELIVERED ================= */
+  const markDelivered = async (orderId) => {
+    await axios.post(
+      `${API}/api/delivery/orders/${orderId}/delivered`,
+      {},
+      { withCredentials: true }
+    );
+
+    setOrders(prev => prev.filter(o => o._id !== orderId));
+    fetchEarnings(); // ✅ backend-driven
   };
 
   return (
     <section
-      className={`min-h-screen pt-6 pb-24 px-4 transition-colors ${
+      className={`min-h-screen pt-6 pb-24 px-4 ${
         dark
           ? "bg-slate-900 text-white"
-          : "bg-gradient-to-br from-orange-50 via-amber-50 to-red-50 text-gray-800"
+          : "bg-gradient-to-br from-orange-50 via-amber-50 to-red-50"
       }`}
     >
       <div className="max-w-md mx-auto space-y-6">
 
-        {/* 🟢 Header */}
+        {/* HEADER */}
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-bold">
-            Delivery{" "}
-            <span className="text-orange-600">Dashboard</span>
+            Delivery <span className="text-orange-600">Dashboard</span>
           </h2>
 
           <button
-            onClick={() => setOnline(!online)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold shadow transition ${
+            onClick={toggleOnline}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold ${
               online
                 ? "bg-green-100 text-green-700"
-                : dark
-                ? "bg-slate-700 text-gray-300"
                 : "bg-gray-200 text-gray-600"
             }`}
           >
@@ -75,14 +135,10 @@ export default function DeliveryDashboard() {
           </button>
         </div>
 
-        {/* 💰 Earnings */}
+        {/* EARNINGS */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={`rounded-2xl shadow-lg p-5 flex items-center justify-between ${
-            dark
-              ? "bg-slate-800 border border-slate-700"
-              : "bg-white/90 backdrop-blur"
+          className={`rounded-2xl p-5 flex justify-between ${
+            dark ? "bg-slate-800" : "bg-white"
           }`}
         >
           <div>
@@ -94,52 +150,66 @@ export default function DeliveryDashboard() {
           <IndianRupee className="w-10 h-10 text-orange-400" />
         </motion.div>
 
-        {/* 🗺️ Map */}
-        <div
-          className={`rounded-2xl shadow-lg overflow-hidden ${
-            dark ? "bg-slate-800 border border-slate-700" : "bg-white/90"
-          }`}
-        >
-          <div
-            className={`flex items-center gap-2 px-4 py-3 border-b ${
-              dark ? "border-slate-700" : ""
-            }`}
-          >
-            <MapPin className="text-orange-600 w-5 h-5" />
-            <h3 className="font-semibold">Live Route</h3>
-          </div>
-          <div
-            className={`h-48 flex items-center justify-center text-sm ${
-              dark ? "bg-slate-700 text-gray-400" : "bg-gray-200 text-gray-500"
-            }`}
-          >
-            Google Map will appear here
-          </div>
-        </div>
-
-        {/* 📦 Orders */}
+        {/* ORDERS */}
         <div>
           <h3 className="font-semibold mb-3 flex items-center gap-2">
             <Bell className="w-5 h-5 text-orange-600" />
-            New Orders
+            Active Orders
           </h3>
 
           {orders.length === 0 ? (
-            <p className="text-sm text-gray-500 text-center">
+            <p className="text-sm text-center text-gray-500">
               No active orders 🚴‍♂️
             </p>
           ) : (
-            orders.map((order) => (
+            orders.map(order => (
               <OrderCard
-                key={order.id}
+                key={order._id}
                 order={order}
                 onAccept={acceptOrder}
                 onReject={rejectOrder}
+                onDeliver={markDelivered}
+                onView={() => setSelectedOrder(order)}
                 dark={dark}
               />
             ))
           )}
         </div>
+
+        {/* VIEW DETAILS MODAL */}
+        {selectedOrder && (
+          <div className="fixed inset-0 z-[999] bg-black/50 flex items-center justify-center">
+            <div className="bg-white text-black rounded-2xl p-6 w-[90%] max-w-md">
+              <h3 className="text-xl font-bold mb-3">Order Details</h3>
+
+              <p><b>Name:</b> {selectedOrder.customerName}</p>
+              <p><b>Phone:</b> {selectedOrder.customerPhone}</p>
+              <p className="mb-3">
+                <b>Address:</b> {selectedOrder.deliveryAddress}
+              </p>
+
+              <h4 className="font-semibold mb-2">Items</h4>
+              {selectedOrder.items.map((i, idx) => (
+                <div key={idx} className="flex justify-between text-sm mb-1">
+                  <span>{i.name} × {i.quantity}</span>
+                  <span>₹{i.price * i.quantity}</span>
+                </div>
+              ))}
+
+              <p className="font-bold mt-3">
+                Total: ₹{selectedOrder.totalAmount}
+              </p>
+
+              <button
+                onClick={() => setSelectedOrder(null)}
+                className="mt-4 w-full bg-black text-white py-2 rounded-xl"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+
       </div>
     </section>
   );
@@ -147,58 +217,80 @@ export default function DeliveryDashboard() {
 
 /* ================= ORDER CARD ================= */
 
-function OrderCard({ order, onAccept, onReject, dark }) {
-  const [timeLeft, setTimeLeft] = useState(order.time);
+function OrderCard({ order, onAccept, onReject, onDeliver, onView, dark }) {
+  const isAssigned = order.orderStatus === "assigned";
+const isAccepted = order.orderStatus === "out_for_delivery";
 
-  useEffect(() => {
-    const t = setInterval(() => {
-      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearInterval(t);
-  }, []);
 
-  const mins = Math.floor(timeLeft / 60);
-  const secs = timeLeft % 60;
+  const openMaps = () => {
+    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+      order.deliveryAddress
+    )}`;
+    window.open(url, "_blank");
+  };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={`rounded-2xl shadow-lg p-5 mb-4 border transition ${
-        dark
-          ? "bg-slate-800 border-slate-700"
-          : "bg-white/90 backdrop-blur border-orange-100"
+      className={`rounded-2xl p-5 mb-4 ${
+        dark ? "bg-slate-800 text-white" : "bg-white text-black"
       }`}
     >
-      <div className="flex justify-between items-start mb-3">
-        <div>
-          <p className="font-semibold">{order.customer}</p>
-          <p className="text-sm text-gray-400">{order.address}</p>
-          <p className="text-xs text-gray-500">
-            {order.distance} away
-          </p>
-        </div>
+      <p className="font-semibold text-lg">
+        {order.customerName}
+      </p>
 
-        <div className="flex items-center gap-1 text-orange-600 font-semibold">
-          <Clock className="w-4 h-4" />
-          {mins}:{secs.toString().padStart(2, "0")}
-        </div>
-      </div>
+      <p className="text-sm">📞 {order.customerPhone}</p>
 
-      <div className="flex gap-3">
-        <button
-          onClick={() => onAccept(order.id)}
-          className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white py-2 rounded-xl font-semibold"
-        >
-          <CheckCircle className="w-5 h-5" /> Accept
-        </button>
-        <button
-          onClick={() => onReject(order.id)}
-          className="flex-1 flex items-center justify-center gap-2 bg-red-500 text-white py-2 rounded-xl font-semibold"
-        >
-          <XCircle className="w-5 h-5" /> Reject
-        </button>
-      </div>
+      <p className="text-sm font-semibold text-orange-600 mt-1">
+        ₹{order.totalAmount}
+      </p>
+
+      <div className="flex gap-2 mt-4 flex-wrap">
+  <button
+    onClick={onView}
+    className="w-full bg-gray-200 text-black py-2 rounded-xl font-semibold"
+  >
+    View Details
+  </button>
+
+  {/* ✅ ASSIGNED → ACCEPT / REJECT */}
+  {isAssigned && (
+    <>
+      <button
+        onClick={() => onAccept(order._id)}
+        className="flex-1 bg-green-600 text-white py-2 rounded-xl font-semibold"
+      >
+        Accept
+      </button>
+
+      <button
+        onClick={() => onReject(order._id)}
+        className="flex-1 bg-red-500 text-white py-2 rounded-xl font-semibold"
+      >
+        Reject
+      </button>
+    </>
+  )}
+
+  {/* ✅ ACCEPTED → TRACK / DELIVERED */}
+  {isAccepted && (
+    <>
+      <button
+        onClick={openMaps}
+        className="flex-1 bg-yellow-500 text-black py-2 rounded-xl font-semibold"
+      >
+        📍 Track
+      </button>
+
+      <button
+        onClick={() => onDeliver(order._id)}
+        className="flex-1 bg-blue-600 text-white py-2 rounded-xl font-semibold"
+      >
+        Delivered
+      </button>
+    </>
+  )}
+</div>
     </motion.div>
   );
 }
