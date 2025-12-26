@@ -607,3 +607,121 @@ ${trackingPixel(trackId)}
 </body>
 </html>
 `;
+
+
+/* ========= ASSIGN DELIVERY BOY EMAIL ========= */
+export const AssignDeliveryBoy_Email_Template = ({
+  deliveryBoyName,
+  orderId,
+  pickupAddress,
+  dropAddress,
+  customerName,
+  customerPhone,
+  expectedEarnings,
+  lang = "en",
+  trackId,
+}) => `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+@media (prefers-color-scheme: dark) {
+  body { background:#121212 !important; color:#fff !important; }
+  .card { background:#1e1e1e !important; }
+}
+</style>
+</head>
+
+<body style="margin:0;padding:0;background:#f2f4f6;font-family:Segoe UI,Arial;">
+<table width="100%">
+<tr>
+<td align="center" style="padding:25px">
+
+<table width="600" class="card"
+style="background:#ffffff;border-radius:12px;
+box-shadow:0 8px 25px rgba(0,0,0,.08);">
+
+<!-- HEADER -->
+<tr>
+<td style="background:linear-gradient(135deg,#43a047,#1b5e20);
+padding:28px;text-align:center;color:#fff">
+<h2 style="margin:0">
+${lang === "hi" ? "नई डिलीवरी असाइन की गई" : "New Delivery Assigned"}
+</h2>
+<p style="opacity:.9;font-size:14px">
+${lang === "hi"
+  ? "कृपया नीचे दिए गए विवरण देखें"
+  : "Please review the delivery details below"}
+</p>
+</td>
+</tr>
+
+<!-- CONTENT -->
+<tr>
+<td style="padding:30px;font-size:15px">
+<p>
+${lang === "hi"
+  ? `नमस्ते <strong>${deliveryBoyName}</strong>,`
+  : `Hello <strong>${deliveryBoyName}</strong>,`}
+</p>
+
+<p>
+${lang === "hi"
+  ? `आपको एक नई डिलीवरी असाइन की गई है।`
+  : `You have been assigned a new delivery order.`}
+</p>
+
+<div style="
+background:#e8f5e9;
+border-left:4px solid #43a047;
+padding:14px;
+font-size:14px;
+margin:18px 0;">
+<strong>${lang === "hi" ? "ऑर्डर विवरण" : "Order Details"}</strong><br/><br/>
+<strong>Order ID:</strong> #${orderId}<br/>
+<strong>${lang === "hi" ? "ग्राहक" : "Customer"}:</strong> ${customerName}<br/>
+<strong>${lang === "hi" ? "फोन" : "Phone"}:</strong> ${customerPhone}<br/>
+<strong>${lang === "hi" ? "पिकअप" : "Pickup"}:</strong> ${pickupAddress}<br/>
+<strong>${lang === "hi" ? "ड्रॉप" : "Drop"}:</strong> ${dropAddress}<br/>
+<strong>${lang === "hi" ? "कमाई" : "Earnings"}:</strong> ₹${expectedEarnings}
+</div>
+
+<p style="font-size:14px">
+${lang === "hi"
+  ? "कृपया समय पर पिकअप और सुरक्षित डिलीवरी सुनिश्चित करें।"
+  : "Please ensure timely pickup and safe delivery."}
+</p>
+
+<div style="
+margin-top:18px;
+background:#fff8e1;
+border-left:4px solid #ffb300;
+padding:12px;
+font-size:13px;">
+📍 ${lang === "hi"
+  ? "डिलीवरी शुरू करने के लिए ऐप में लॉगिन करें"
+  : "Login to the app to start delivery"}
+</div>
+</td>
+</tr>
+
+<!-- FOOTER -->
+<tr>
+<td style="background:#f7f9fb;padding:15px;
+text-align:center;font-size:12px;color:#888">
+${brandFooter()}
+</td>
+</tr>
+
+</table>
+
+${trackingPixel(trackId)}
+
+</td>
+</tr>
+</table>
+</body>
+</html>
+`;

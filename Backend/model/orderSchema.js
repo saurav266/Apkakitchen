@@ -66,7 +66,13 @@ const orderSchema = new mongoose.Schema(
   default: "placed"
 },
 
-
+cancelReason: {
+  type: String
+},
+cancelledBy: {
+  type: String,
+  enum: ["delivery", "admin", "user"]
+},
     deliveryAddress: {
       type: String,
       required: true

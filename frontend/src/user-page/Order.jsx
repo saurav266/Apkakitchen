@@ -1,12 +1,16 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
+
 const API =import.meta.env.VITE_API_URL || "http://localhost:3000";
 export default function UserOrdersPage() {
   const [orders, setOrders] = useState([]);
   const [expanded, setExpanded] = useState(null);
   const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
 
   useEffect(() => {
     fetchOrders();
@@ -122,14 +126,30 @@ export default function UserOrdersPage() {
                 </div>
 
                 {/* ACTIONS */}
-                <div className="flex gap-3 pt-2">
-                  {order.orderStatus === "delivered" && (
-                    <ActionBtn text="Reorder" />
-                  )}
-                  {order.orderStatus !== "delivered" && (
-                    <ActionBtn text="Track Order" />
-                  )}
-                </div>
+                {/* ACTIONS */}
+<div className="flex gap-3 pt-2 flex-wrap">
+  {/* 👁 VIEW DETAILS */}
+  <ActionBtn
+    text="View Details"
+    onClick={() => navigate(`/orders/${order._id}`)}
+    variant="outline"
+  />
+
+  {/* 🚚 TRACK */}
+  {order.orderStatus !== "delivered" &&
+    order.orderStatus !== "cancelled" && (
+      <ActionBtn
+        text="Track Order"
+        onClick={() => navigate(`/orders/${order._id}`)}
+      />
+    )}
+
+  {/* 🔁 REORDER */}
+  {order.orderStatus === "delivered" && (
+    <ActionBtn text="Reorder" />
+  )}
+</div>
+
               </motion.div>
             )}
           </AnimatePresence>
@@ -141,20 +161,27 @@ export default function UserOrdersPage() {
 
 /* ================= COMPONENTS ================= */
 
-function FilterBtn({ label, active, onClick }) {
+function ActionBtn({ text, onClick, variant = "solid" }) {
+  const styles =
+    variant === "outline"
+      ? "border border-red-600 text-red-600 bg-white hover:bg-red-50"
+      : "bg-red-600 text-white hover:bg-red-700";
+
   return (
-    <button
-      onClick={onClick}
-      className={`px-4 py-1.5 rounded-full text-sm font-semibold transition ${
-        active
-          ? "bg-yellow-300 text-red-900 shadow"
-          : "bg-white text-gray-600 border"
-      }`}
+    <motion.button
+      onClick={(e) => {
+        e.stopPropagation(); // ✅ prevent card toggle
+        onClick?.();
+      }}
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+      className={`px-5 py-2 rounded-full text-sm font-semibold shadow transition ${styles}`}
     >
-      {label}
-    </button>
+      {text}
+    </motion.button>
   );
 }
+
 
 function StatusBadge({ status }) {
   const map = {
@@ -195,16 +222,18 @@ function OrderTimeline({ status }) {
     </div>
   );
 }
-
-function ActionBtn({ text }) {
+function FilterBtn({ label, active, onClick }) {
   return (
-    <motion.button
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
-      className="px-5 py-2 rounded-full bg-red-600 text-white text-sm font-semibold shadow hover:bg-red-700 transition"
+    <button
+      onClick={onClick}
+      className={`px-4 py-1.5 rounded-full text-sm font-semibold transition ${
+        active
+          ? "bg-yellow-300 text-red-900 shadow"
+          : "bg-white text-gray-600 border hover:bg-orange-50"
+      }`}
     >
-      {text}
-    </motion.button>
+      {label}
+    </button>
   );
 }
 

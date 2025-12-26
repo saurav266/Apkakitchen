@@ -1,15 +1,16 @@
-import React from "react";
+import React, { memo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { LogOut, Shield } from "lucide-react";
 
-export default function AdminNavbar() {
+const AdminNavbar = memo(function AdminNavbar() {
   const navigate = useNavigate();
 
-  const handleLogout = () => {
+  // ✅ stable handler
+  const handleLogout = useCallback(() => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     navigate("/login");
-  };
+  }, [navigate]);
 
   return (
     <header
@@ -65,4 +66,6 @@ export default function AdminNavbar() {
       </div>
     </header>
   );
-}
+});
+
+export default AdminNavbar;

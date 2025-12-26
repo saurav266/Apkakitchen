@@ -2,7 +2,13 @@ import express from "express";
 
 import {  authorizeRoles } from "../middleware/authMiddleware.js";
 import { protect } from "../middleware/authMiddleware.js";
-import { getAssignedOrders,rejectOrder,acceptOrder,markOrderDelivered,getDeliveryEarnings,getDeliveredPaymentSummary,getDeliveredOrders,getOrderDetails,getDeliveryProfile,updateDeliveryProfile} from "../controller/deliveryBoyController.js";
+import { getAssignedOrders,
+  rejectOrder,
+  acceptOrder,markOrderDelivered,
+  getDeliveryEarnings,getDeliveredPaymentSummary,
+  getDeliveredOrders,getOrderDetails,getDeliveryProfile,
+  updateDeliveryProfile,cancelDeliveryOrder
+} from "../controller/deliveryBoyController.js";
 
 const router = express.Router();
 
@@ -54,6 +60,12 @@ router.get(
   protect,
   authorizeRoles("delivery"),
   getDeliveredOrders
+);
+router.post(
+  "/orders/:id/cancel",
+   protect,
+  authorizeRoles("delivery"),
+  cancelDeliveryOrder
 );
 router.get(
   "/orders/:id",

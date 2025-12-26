@@ -120,6 +120,25 @@ export default function AdminOrderDetails() {
   <p>Payment: {order.paymentMethod}</p>
 </div>
 
+{order.orderStatus === "cancelled" && (
+  <div className="bg-red-50 border border-red-200 p-5 rounded-xl shadow mb-6">
+    <h3 className="font-semibold mb-2 text-red-600">
+      Cancellation Details
+    </h3>
+
+    <p>
+      <b>Cancelled By:</b>{" "}
+      <span className="capitalize">
+        {order.cancelledBy || "Unknown"}
+      </span>
+    </p>
+
+    <p className="mt-1">
+      <b>Reason:</b>{" "}
+      {order.cancelReason || "No reason provided"}
+    </p>
+  </div>
+)}
 
       {/* ORDER ITEMS */}
       <div className="bg-white p-5 rounded-xl shadow mb-6">

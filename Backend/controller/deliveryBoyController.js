@@ -456,6 +456,10 @@ export const markOrderDelivered = async (req, res) => {
 
     // ✅ Mark order delivered
     order.orderStatus = "delivered";
+
+    // ✅ 🔥 CRITICAL LINE (FIXES REVENUE)
+    order.paymentStatus = "paid";
+
     await order.save();
 
     const DELIVERY_EARNING = 50;
@@ -465,9 +469,9 @@ export const markOrderDelivered = async (req, res) => {
       await DeliveryBoy.findByIdAndUpdate(
         order.deliveryBoy,
         {
-          $inc: { totalEarnings: DELIVERY_EARNING }, // ✅ FIX
+          $inc: { totalEarnings: DELIVERY_EARNING },
           $push: {
-            earningsHistory: {                   // ✅ FIX
+            earningsHistory: {
               orderId: order._id,
               amount: DELIVERY_EARNING,
               date: new Date()
@@ -500,6 +504,50 @@ export const markOrderDelivered = async (req, res) => {
 };
 
 
+// 
+/* ========= DELIVERY BOY CANCEL ORDER ========= */
+export const cancelDeliveryOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    const order = await Order.findById(id);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
+    }
+
+    order.orderStatus = "cancelled";
+    order.cancelReason = reason || "Cancelled by delivery partner";
+    order.cancelledBy = "delivery";
+    order.deliveryBoy = null;
+
+    await order.save();
+
+    // 🔔 ADMIN SOCKET ALERT
+    io.to("admin").emit("order-cancelled", {
+      orderId: order._id,
+      cancelledBy: order.cancelledBy,
+      reason: order.cancelReason,
+      time: new Date()
+    });
+
+    res.json({
+      success: true,
+      message: "Order cancelled successfully"
+    });
+
+  } catch (error) {
+    console.error("CANCEL ERROR:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
 
 // for erning
 export const getDeliveryEarnings = async (req, res) => {

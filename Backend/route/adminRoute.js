@@ -2,10 +2,21 @@ import express from "express";
 import { addDeliveryBoy ,verifyByOtpDeliveryBoy} from "../controller/deliveryBoyController.js";
 import { authorizeRoles } from "../middleware/authMiddleware.js";
 import { protect } from "../middleware/authMiddleware.js";
-import { getAllUsers ,toggleUserStatus,deleteUser,getUserFullDetails,allDeliveryBoys,getDeliveryBoyById,updateDeliveryBoy,deleteDeliveryBoy} from "../controller/adminController.js";
+import { getAllUsers ,toggleUserStatus,deleteUser,getUserFullDetails,allDeliveryBoys,getDeliveryBoyById,
+  updateDeliveryBoy,deleteDeliveryBoy,
+  getAdminDashboard
+} from "../controller/adminController.js";
 import { getAllOrders ,getDeliveryBoys,assignDeliveryBoy,updateOrderStatus,getOrderById} from "../controller/adminController.js";
 
 const router = express.Router();
+
+
+router.get(
+  "/dashboard",
+  protect,
+  authorizeRoles("admin"),
+  getAdminDashboard
+);
 
 router.post(
   "/Add-delivery-boy",

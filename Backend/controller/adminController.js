@@ -8,6 +8,7 @@ import User from "../model/userSchema.js";
 import DeliveryBoy from "../model/deliveryBoySchema.js";
 import { io }  from "../server.js";
 import crypto from "crypto";
+import { sendAssignDeliveryBoyEmail } from "../services/emailService.js";
 
 const DATABASE_URL = "mongodb://127.0.0.1:27017/Apkakitchen"
 // const createAdmin = async () => {
@@ -524,11 +525,10 @@ export const getOrderById = async (req, res) => {
 };
 export const assignDeliveryBoy = async (req, res) => {
   try {
-    const { id } = req.params;            // order id
-    const { deliveryBoy } = req.body;     // delivery boy id
+    const { id } = req.params;          // order id
+    const { deliveryBoy } = req.body;   // delivery boy id
 
-    console.log("📦 Assigning to delivery boy:", deliveryBoy);
-
+    /* ================= FIND ORDER ================= */
     const order = await Order.findById(id);
     if (!order) {
       return res.status(404).json({
@@ -537,36 +537,54 @@ export const assignDeliveryBoy = async (req, res) => {
       });
     }
 
-    // Assign
+    /* ================= ASSIGN ================= */
     order.deliveryBoy = deliveryBoy;
-     order.orderStatus = "assigned";   // ✅ IMPORTANT
+    order.orderStatus = "assigned";
     await order.save();
 
-    // Mark delivery boy busy
-    await DeliveryBoy.findByIdAndUpdate(deliveryBoy, {
-      status: "busy"
-    });
-
-    // 🔥 POPULATE ORDER (CRITICAL)
-    const populatedOrder = await Order.findById(order._id)
-      .populate("userId", "name phone");
-
-    // 🔥 EMIT TO CORRECT DELIVERY ROOM
-    console.log("📤 Emitting socket to:", `delivery_${deliveryBoy}`);
-
-    io.to(`delivery_${deliveryBoy}`).emit(
-      "order-assigned",
-      populatedOrder
+    /* ================= DELIVERY BOY ================= */
+    const boy = await DeliveryBoy.findByIdAndUpdate(
+      deliveryBoy,
+      { status: "busy" },
+      { new: true }
     );
 
+    if (!boy) {
+      return res.status(404).json({
+        success: false,
+        message: "Delivery boy not found"
+      });
+    }
+
+    /* ================= SOCKET ================= */
+    io.to(`delivery_${deliveryBoy}`).emit("order-assigned", order);
+
+    /* ================= EMAIL ================= */
+    try {
+      await sendAssignDeliveryBoyEmail({
+        email: boy.email,
+        deliveryBoyName: boy.name,
+        orderId: order._id,
+        pickupAddress: "Restaurant pickup (check app)", // since not in schema
+        dropAddress: order.deliveryAddress,
+        customerName: order.customerName,
+        customerPhone: order.customerPhone,
+        expectedEarnings: order.totalAmount
+      });
+    } catch (mailErr) {
+      console.error("📧 Email failed:", mailErr.message);
+      // Do NOT fail assignment if email fails
+    }
+
+    /* ================= RESPONSE ================= */
     res.json({
       success: true,
-      message: "Delivery boy assigned",
-      order: populatedOrder
+      message: "Delivery boy assigned successfully",
+      order
     });
 
   } catch (error) {
-    console.error("ASSIGN DELIVERY ERROR:", error);
+    console.error("❌ ASSIGN DELIVERY ERROR:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error"
@@ -632,3 +650,149 @@ export const updateOrderStatus = async (req, res) => {
     });
   }
 };
+
+
+export const getAdminDashboard = async (req, res) => {
+  try {
+    const { filter = "day", from, to } = req.query;
+
+    /* ================= DATE RANGE ================= */
+    let startDate = new Date();
+    if (filter === "week") startDate.setDate(startDate.getDate() - 7);
+    if (filter === "month") startDate.setMonth(startDate.getMonth() - 1);
+    if (filter === "year") startDate.setFullYear(startDate.getFullYear() - 1);
+
+    if (from && to) {
+      startDate = new Date(from);
+    }
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    /* ================= TOTAL ORDERS ================= */
+    const totalOrders = await Order.countDocuments();
+
+    const todayOrders = await Order.countDocuments({
+      createdAt: { $gte: todayStart }
+    });
+
+    /* ================= TOTAL USERS ================= */
+    const totalUsers = await User.countDocuments();
+
+    /* ================= TODAY REVENUE ================= */
+    const todayRevenueAgg = await Order.aggregate([
+      {
+        $match: {
+          updatedAt: { $gte: todayStart },
+          orderStatus: "delivered",
+          $or: [
+            { paymentMethod: "Online", paymentStatus: "paid" },
+            { paymentMethod: "COD" }
+          ]
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: "$totalAmount" }
+        }
+      }
+    ]);
+
+    const todayRevenue = todayRevenueAgg[0]?.total || 0;
+
+    /* ================= STATUS COUNTS ================= */
+    const statusAgg = await Order.aggregate([
+      { $group: { _id: "$orderStatus", count: { $sum: 1 } } }
+    ]);
+
+    const statusCounts = {
+      placed: 0,
+      preparing: 0,
+      assigned: 0,
+      out_for_delivery: 0,
+      delivered: 0,
+      cancelled: 0
+    };
+
+    statusAgg.forEach(s => {
+      if (statusCounts[s._id] !== undefined) {
+        statusCounts[s._id] = s.count;
+      }
+    });
+
+    /* ================= CHARTS ================= */
+    const chartAgg = await Order.aggregate([
+      {
+        $match: {
+          updatedAt: { $gte: startDate },
+          orderStatus: "delivered"
+        }
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: {
+              format: "%Y-%m-%d",
+              date: "$updatedAt"
+            }
+          },
+          orders: { $sum: 1 },
+          revenue: { $sum: "$totalAmount" }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]);
+
+    /* ================= PAYMENT SPLIT ================= */
+    const paymentAgg = await Order.aggregate([
+  {
+    $match: {
+      orderStatus: "delivered",
+      paymentStatus: "paid" // ✅ ONE RULE FOR ALL
+    }
+  },
+  {
+    $group: {
+      _id: "$paymentMethod",
+      amount: { $sum: "$totalAmount" }
+    }
+  }
+]);
+
+const paymentSplit = { cod: 0, online: 0 };
+
+paymentAgg.forEach(p => {
+  if (p._id === "COD") paymentSplit.cod = p.amount;
+  if (p._id === "Online") paymentSplit.online = p.amount;
+});
+
+
+    /* ================= RESPONSE ================= */
+    res.json({
+      success: true,
+      stats: {
+        totalOrders,
+        todayOrders,
+        todayRevenue,
+        totalUsers
+      },
+      statusCounts,
+      paymentSplit, // ✅ CRITICAL FIX
+      charts: {
+        orders: chartAgg.map(i => ({ name: i._id, orders: i.orders })),
+        revenue: chartAgg.map(i => ({ name: i._id, revenue: i.revenue }))
+      }
+    });
+
+  } catch (err) {
+    console.error("ADMIN DASHBOARD ERROR:", err);
+    res.status(500).json({
+      success: false,
+      message: "Dashboard fetch failed"
+    });
+  }
+};
+
+
+

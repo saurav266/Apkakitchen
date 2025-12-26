@@ -68,32 +68,53 @@ export default function Checkout() {
 
   /* ================= CURRENT LOCATION ================= */
 
-  const useCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      alert("Geolocation not supported");
-      return;
-    }
+ const useCurrentLocation = () => {
+  if (!navigator.geolocation) {
+    alert("Geolocation not supported");
+    return;
+  }
 
-    navigator.geolocation.getCurrentPosition(async (pos) => {
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
       const { latitude, longitude } = pos.coords;
 
       try {
         const res = await axios.get(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
-        );
+  "https://maps.googleapis.com/maps/api/geocode/json",
+  {
+    params: {
+      latlng: `${latitude},${longitude}`,
+      key: import.meta.env.VITE_GOOGLE_MAPS_KEY,
+    },
+    withCredentials: false, // ⭐ IMPORTANT FIX
+  }
+);
 
-        const addr = res.data.address || {};
-        setAddressLine(
-          addr.road || addr.neighbourhood || addr.suburb || ""
-        );
-        setCity(addr.city || addr.town || "");
-        setState(addr.state || "");
-        setPincode(addr.postcode || "");
-      } catch {
-        alert("Failed to auto-fill location");
+
+        if (!res.data.results.length) {
+          alert("Unable to fetch address");
+          return;
+        }
+
+        const result = res.data.results[0];
+        const components = result.address_components;
+
+        const get = (type) =>
+          components.find((c) => c.types.includes(type))?.long_name || "";
+
+        setAddressLine(result.formatted_address);
+        setCity(get("locality") || get("administrative_area_level_2"));
+        setState(get("administrative_area_level_1"));
+        setPincode(get("postal_code"));
+      } catch (err) {
+        console.error(err);
+        alert("Failed to fetch address from Google Maps");
       }
-    });
-  };
+    },
+    () => alert("Location permission denied")
+  );
+};
+
 
   const subtotal = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
   const delivery = subtotal > 0 ? 40 : 0;
@@ -110,7 +131,7 @@ export default function Checkout() {
   setLoading(true);
   try {
     await axios.post(
-      `${API}/api/order/create`,
+      `${API}/api/orders/create`,
       {
         customerName: name,          // ✅ MATCHES SCHEMA
         customerPhone: phone,        // ✅ MATCHES SCHEMA

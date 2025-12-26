@@ -1,3 +1,4 @@
+import { memo, useCallback } from "react";
 import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -9,8 +10,8 @@ import {
   ChevronLeft,
   ChevronRight
 } from "lucide-react";
-import { useState } from "react";
 
+/* ================= STATIC LINKS ================= */
 const links = [
   { name: "Dashboard", path: "/admin/dashboard", icon: LayoutDashboard },
   { name: "Orders", path: "/admin/orders", icon: ClipboardList },
@@ -20,7 +21,12 @@ const links = [
   { name: "Settings", path: "/admin/settings", icon: Settings }
 ];
 
-export default function AdminSidebar({ collapsed, setCollapsed }) {
+const AdminSidebar = memo(function AdminSidebar({ collapsed, setCollapsed }) {
+  // ✅ stable toggle handler
+  const toggleCollapsed = useCallback(() => {
+    setCollapsed(prev => !prev);
+  }, [setCollapsed]);
+
   return (
     <aside
       className={`
@@ -34,7 +40,7 @@ export default function AdminSidebar({ collapsed, setCollapsed }) {
     >
       {/* 🔘 Toggle */}
       <button
-        onClick={() => setCollapsed(!collapsed)}
+        onClick={toggleCollapsed}
         className="
           absolute -right-3 top-6
           w-7 h-7 rounded-full
@@ -48,8 +54,9 @@ export default function AdminSidebar({ collapsed, setCollapsed }) {
 
       {/* 🧭 Menu */}
       <nav className="mt-6 flex flex-col gap-2 px-3">
-        {links.map((link) => {
+        {links.map(link => {
           const Icon = link.icon;
+
           return (
             <NavLink
               key={link.name}
@@ -74,4 +81,6 @@ export default function AdminSidebar({ collapsed, setCollapsed }) {
       </nav>
     </aside>
   );
-}
+});
+
+export default AdminSidebar;

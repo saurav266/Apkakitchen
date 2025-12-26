@@ -6,7 +6,9 @@ import {
   ResendOTP_Email_Template,
   ForgotPassword_Email_Template,
   AssignDeliveryBoyOTP_Email_Template,
-  AddDeliveryBoyOTP_Email_Template
+  AddDeliveryBoyOTP_Email_Template,
+  AssignDeliveryBoy_Email_Template
+
 } from "../utils/emailTemplate.js";
 
 /* ========= EMAIL VERIFICATION ========= */
@@ -106,6 +108,39 @@ export const sendAssignDeliveryBoyOtpEmail = async ({
       orderId,
       lang,
       trackId
+    }),
+  });
+};
+
+
+/* ========= ASSIGN DELIVERY BOY (NO OTP) ========= */
+export const sendAssignDeliveryBoyEmail = async ({
+  email,
+  deliveryBoyName,
+  orderId,
+  pickupAddress,
+  dropAddress,
+  customerName,
+  customerPhone,
+  expectedEarnings,
+  lang = "en",
+}) => {
+  const trackId = crypto.randomUUID();
+
+  await transporter.sendMail({
+    from: `"ApkaKitchen" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: `New Delivery Assigned – Order #${orderId}`,
+    html: AssignDeliveryBoy_Email_Template({
+      deliveryBoyName,
+      orderId,
+      pickupAddress,
+      dropAddress,
+      customerName,
+      customerPhone,
+      expectedEarnings,
+      lang,
+      trackId,
     }),
   });
 };
