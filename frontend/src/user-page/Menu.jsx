@@ -1,64 +1,87 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import MiniCart from "../User-Components/MiniCart.jsx";
+import axios from "axios";
 
-// images
-import pizzaImg from "../assets/hero-section/pizza.png";
-import vegThali from "../assets/hero-section/veg-thali.png";
-import briyaniImg from "../assets/hero-section/biryani.png";
+const API = "http://localhost:3000";
 
 const categories = [
   { id: "all", name: "All" },
-  { id: "pizza", name: "Pizza" },
-  { id: "thali", name: "Veg Thali" },
+  { id: "thali", name: "Thali" },
   { id: "biryani", name: "Biryani" },
-];
-
-const menuData = [
-  { id: 1, name: "Margherita Pizza", desc: "Classic cheese & basil", price: 299, img: pizzaImg, cat: "pizza", type: "veg", rating: 4.5 },
-  { id: 2, name: "Farmhouse Pizza", desc: "Veg loaded delight", price: 379, img: pizzaImg, cat: "pizza", type: "veg", rating: 4.7 },
-  { id: 3, name: "Veg Thali", desc: "Dal, sabzi, roti, rice", price: 249, img: vegThali, cat: "thali", type: "veg", rating: 4.6 },
-  { id: 4, name: "Paneer Thali", desc: "Rich paneer curry", price: 299, img: vegThali, cat: "thali", type: "veg", rating: 4.8 },
-  { id: 5, name: "Chicken Dum Biryani", desc: "Slow cooked & aromatic", price: 349, img: briyaniImg, cat: "biryani", type: "nonveg", rating: 4.9 },
-  { id: 6, name: "Veg Biryani", desc: "Aromatic veg rice", price: 299, img: briyaniImg, cat: "biryani", type: "veg", rating: 4.4 },
+  { id: "chinese", name: "Chinese" },
+  { id: "indian", name: "Indian" },
 ];
 
 export default function Menu() {
+  const navigate = useNavigate();
+
   const [activeCat, setActiveCat] = useState("all");
-  const [foodType, setFoodType] = useState("all"); // all | veg | nonveg
+  const [foodType, setFoodType] = useState("all");
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState([]);
   const [miniOpen, setMiniOpen] = useState(false);
+  const [menuData, setMenuData] = useState([]);
   const catRef = useRef(null);
 
+  /* ================= FETCH FROM BACKEND ================= */
+  const fetchMenu = async () => {
+    try {
+      const res = await axios.get(`${API}/api/products`);
+      if (res.data.success) {
+        setMenuData(res.data.products);
+      }
+    } catch (err) {
+      console.error("Failed to fetch menu", err);
+    }
+  };
+
   useEffect(() => {
+    fetchMenu();
     const c = JSON.parse(localStorage.getItem("cart")) || [];
     setCart(c);
   }, []);
 
+  /* ================= CART ================= */
   const updateCart = (item, delta) => {
     let c = [...cart];
-    const found = c.find((i) => i.id === item.id);
+    const found = c.find((i) => i._id === item._id);
+
     if (found) {
       found.qty += delta;
-      if (found.qty <= 0) c = c.filter((i) => i.id !== item.id);
+      if (found.qty <= 0) c = c.filter((i) => i._id !== item._id);
     } else if (delta > 0) {
       c.push({ ...item, qty: 1 });
     }
+
     setCart(c);
     localStorage.setItem("cart", JSON.stringify(c));
     window.dispatchEvent(new Event("cartUpdated"));
     setMiniOpen(true);
   };
 
-  const getQty = (id) => cart.find((i) => i.id === id)?.qty || 0;
+  const getQty = (id) =>
+    cart.find((i) => i._id === id)?.qty || 0;
 
+  /* ================= FILTER ================= */
   const filtered = menuData.filter((i) => {
-    const matchCat = activeCat === "all" || i.cat === activeCat;
-    const matchType = foodType === "all" || i.type === foodType;
-    const matchSearch = i.name.toLowerCase().includes(search.toLowerCase());
-    return matchCat && matchType && matchSearch;
-  });
+  const matchCat =
+    activeCat === "all" || i.category === activeCat;
+
+  // 🔥 FIX: If category is "thali", ignore foodType filter
+  const matchType =
+    activeCat === "thali"
+      ? true
+      : foodType === "all" ||
+        i.foodType === (foodType === "nonveg" ? "non-veg" : foodType);
+
+  const matchSearch = i.name
+    .toLowerCase()
+    .includes(search.toLowerCase());
+
+  return matchCat && matchType && matchSearch && i.isAvailable;
+});
 
   return (
     <section className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-red-50 pt-28 pb-20">
@@ -76,25 +99,19 @@ export default function Menu() {
 
         {/* Search + Veg Toggle */}
         <div className="flex flex-col md:flex-row gap-4 justify-between items-center mb-8">
-          {/* Search */}
           <div className="relative w-full md:w-72">
             <input
               type="text"
               placeholder="Search food..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="
-                w-full pl-10 pr-4 py-2.5 rounded-full
-                border border-orange-200 focus:outline-none
-                focus:ring-2 focus:ring-orange-400
-              "
+              className="w-full pl-10 pr-4 py-2.5 rounded-full border border-orange-200 focus:outline-none focus:ring-2 focus:ring-orange-400"
             />
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
               🔍
             </span>
           </div>
 
-          {/* Veg / Nonveg Filter */}
           <div className="flex gap-3">
             {["all", "veg", "nonveg"].map((t) => (
               <button
@@ -119,7 +136,7 @@ export default function Menu() {
           </div>
         </div>
 
-        {/* Swipe Categories */}
+        {/* Categories */}
         <div
           ref={catRef}
           className="flex gap-3 overflow-x-auto pb-3 mb-10 scrollbar-hide"
@@ -153,34 +170,33 @@ export default function Menu() {
             className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8"
           >
             {filtered.map((item) => {
-              const qty = getQty(item.id);
-              const isVeg = item.type === "veg";
+              const qty = getQty(item._id);
+              const isVeg = item.foodType === "veg";
+
               return (
                 <motion.div
-                  key={item.id}
+                  key={item._id}
                   whileHover={{ y: -6 }}
+                  onClick={() => navigate(`/food/${item._id}`)}
                   className={`
                     bg-white/90 rounded-2xl shadow-lg overflow-hidden flex flex-col
-                    border-2
+                    border-2 cursor-pointer
                     ${isVeg ? "border-green-200" : "border-red-200"}
                   `}
                 >
                   {/* Image */}
                   <div className="h-48 bg-orange-50 flex items-center justify-center overflow-hidden relative">
-                    {/* Veg/Nonveg Icon */}
                     <span
                       className={`
-                        absolute top-3 right-3 flex items-center gap-1
-                        text-xs font-semibold px-2 py-1 rounded-full
+                        absolute top-3 right-3 text-xs font-semibold px-2 py-1 rounded-full
                         ${isVeg ? "bg-green-500 text-white" : "bg-red-500 text-white"}
                       `}
                     >
-                      <span className="w-2 h-2 rounded-full bg-white" />
                       {isVeg ? "VEG" : "NON-VEG"}
                     </span>
 
                     <motion.img
-                      src={item.img}
+                      src={item.image}
                       alt={item.name}
                       className="h-40 object-contain"
                       whileHover={{ scale: 1.15 }}
@@ -191,44 +207,49 @@ export default function Menu() {
                   {/* Content */}
                   <div className="p-5 flex flex-col flex-1">
                     <h3 className="text-lg font-semibold">{item.name}</h3>
-                    <p className="text-sm text-gray-600 mb-2">{item.desc}</p>
+                    <p className="text-sm text-gray-600 mb-2">
+                      {item.description}
+                    </p>
 
-                    {/* Rating */}
                     <div className="text-yellow-500 text-sm mb-3">
-                      {"★".repeat(Math.floor(item.rating))}{" "}
+                      {"★".repeat(Math.floor(item.rating || 0))}{" "}
                       <span className="text-gray-500">
-                        {item.rating.toFixed(1)}
+                        {(item.rating || 0).toFixed(1)}
                       </span>
                     </div>
 
                     <div className="mt-auto flex items-center justify-between">
                       <span className="text-lg font-bold text-orange-600">
-                        ₹{item.price}
+                        ₹{item.finalPrice || item.price}
                       </span>
 
-                      {/* Qty Controls */}
                       {qty === 0 ? (
                         <button
-                          onClick={() => updateCart(item, 1)}
-                          className="
-                            px-4 py-2 rounded-full text-sm font-medium
-                            bg-gradient-to-r from-orange-500 to-red-500
-                            text-white shadow
-                          "
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            updateCart(item, 1);
+                          }}
+                          className="px-4 py-2 rounded-full text-sm font-medium bg-gradient-to-r from-orange-500 to-red-500 text-white shadow"
                         >
                           Add
                         </button>
                       ) : (
                         <div className="flex items-center gap-3">
                           <button
-                            onClick={() => updateCart(item, -1)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              updateCart(item, -1);
+                            }}
                             className="w-8 h-8 rounded-full bg-gray-200 text-lg"
                           >
                             −
                           </button>
                           <span className="font-semibold">{qty}</span>
                           <button
-                            onClick={() => updateCart(item, 1)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              updateCart(item, 1);
+                            }}
                             className="w-8 h-8 rounded-full bg-orange-500 text-white text-lg"
                           >
                             +

@@ -1,10 +1,51 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom";  
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
-export default function MiniCart({ open, cart, onClose }) {
-  const total = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
+export default function MiniCart({ open, onClose }) {
+  const [cart, setCart] = useState([]);
   const navigate = useNavigate();
+
+  // 🔹 Load cart from localStorage
+  useEffect(() => {
+    const c = JSON.parse(localStorage.getItem("cart")) || [];
+    setCart(c);
+  }, []);
+
+  // 🔹 Sync cart when updated elsewhere
+  useEffect(() => {
+    const handleUpdate = () => {
+      const c = JSON.parse(localStorage.getItem("cart")) || [];
+      setCart(c);
+    };
+    window.addEventListener("cartUpdated", handleUpdate);
+    return () => window.removeEventListener("cartUpdated", handleUpdate);
+  }, []);
+
+  // 🔹 Remove item
+  const removeItem = (id) => {
+    const c = cart.filter((i) => i._id !== id);
+    setCart(c);
+    localStorage.setItem("cart", JSON.stringify(c));
+    window.dispatchEvent(new Event("cartUpdated"));
+  };
+
+  // 🔹 Update quantity
+  const updateQty = (id, delta) => {
+    let c = [...cart];
+    const item = c.find((i) => i._id === id);
+    if (!item) return;
+
+    item.qty += delta;
+    c = c.filter((i) => i.qty > 0);
+
+    setCart(c);
+    localStorage.setItem("cart", JSON.stringify(c));
+    window.dispatchEvent(new Event("cartUpdated"));
+  };
+
+  const total = cart.reduce((sum, i) => sum + i.finalPrice * i.qty, 0);
 
   return (
     <AnimatePresence>
@@ -33,33 +74,36 @@ export default function MiniCart({ open, cart, onClose }) {
             <div className="space-y-4 max-h-64 overflow-y-auto">
               {cart.map((item) => (
                 <motion.div
-                  key={item.id}
+                  key={item._id || item.id}   
                   initial={{ opacity: 0, x: 10 }}
                   animate={{ opacity: 1, x: 0 }}
                   className="flex items-center gap-3"
                 >
                   {/* Image */}
                   <img
-                    src={item.image}
+                    src={item.image || "/placeholder-food.png"}
                     alt={item.name}
-                    className="
-                      w-12 h-12 rounded-xl
-                      object-cover border
-                    "
+                    className="w-12 h-12 rounded-xl object-cover border"
                   />
 
                   {/* Name + Qty */}
                   <div className="flex-1">
                     <p className="text-sm font-medium">{item.name}</p>
-                    <p className="text-xs text-gray-500">
-                      Qty: {item.qty}
-                    </p>
+                    <p className="text-xs text-gray-500">Qty: {item.qty}</p>
                   </div>
 
                   {/* Price */}
                   <p className="text-sm font-semibold">
-                    ₹{item.price * item.qty}
+                    ₹{item.finalPrice * item.qty}
                   </p>
+
+                  {/* Remove */}
+                  <button
+                    onClick={() => removeItem(item._id)}
+                    className="text-red-500 text-xs hover:underline ml-2"
+                  >
+                    Remove
+                  </button>
                 </motion.div>
               ))}
             </div>

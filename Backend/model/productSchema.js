@@ -13,7 +13,7 @@ const productSchema = new mongoose.Schema(
     category: {
       type: String,
       required: true,
-      enum: ["veg", "non-veg", "drinks", "dessert"]
+      enum: ["veg", "non-veg", "thali", "briyani","chinese","indian"]
     },
 
     // Food description
@@ -86,14 +86,12 @@ const productSchema = new mongoose.Schema(
 );
 
 // Auto calculate final price
-productSchema.pre("save", function (next) {
+productSchema.pre("save", function () {
   if (this.discountPercentage > 0) {
     this.finalPrice =
       this.price - (this.price * this.discountPercentage) / 100;
   } else {
     this.finalPrice = this.price;
   }
-  next();
 });
-
 export default mongoose.model("Product", productSchema);
