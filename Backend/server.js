@@ -34,7 +34,7 @@ import AdminRoute from "./route/adminRoute.js";
 import authRoute from "./route/authRoute.js";
 import orderRoute from "./route/orderRoute.js";
 import productRoute from "./route/productRoute.js";
-
+import contactRoutes from "./route/contactRoute.js"
 app.use("/api/users", UserRoute);
 app.use("/api/delivery", DeliveryBoyRoute);
 app.use("/api/admin", AdminRoute);
@@ -42,6 +42,7 @@ app.use("/api/auth", authRoute);
 app.use("/api/orders", orderRoute);
 app.use("/api/products", productRoute);
 app.use("/api/maps", mapsRoutes);
+app.use("/api/contact", contactRoutes);
 // ===== HEALTH CHECK =====
 app.get("/", (req, res) => {
   res.send("🚀 Server API is running");
