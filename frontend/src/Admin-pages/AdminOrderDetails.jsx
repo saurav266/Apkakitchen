@@ -44,26 +44,27 @@ export default function AdminOrderDetails() {
     setDeliveryBoys(data.deliveryBoys);
   };
 
+  const refundInProgress =
+    order?.refundStatus && order.refundStatus !== "none";
+
   /* ================= UPDATE STATUS ================= */
   const updateStatus = async () => {
+    if (refundInProgress) return;
+
     await axios.put(
       `${API}/api/admin/order/${id}/status`,
       { status },
       { withCredentials: true }
     );
+
     alert("Order status updated");
+    fetchOrder();
   };
 
   /* ================= ASSIGN DELIVERY ================= */
   const assignDeliveryBoy = async () => {
-  if (!deliveryBoy) {
-    alert("Please select a delivery boy");
-    return;
-  }
+    if (!deliveryBoy || refundInProgress) return;
 
-  console.log("Assigning delivery boy:", deliveryBoy); // DEBUG
-
-  try {
     await axios.put(
       `${API}/api/admin/order/${id}/assign`,
       { deliveryBoy },
@@ -71,12 +72,8 @@ export default function AdminOrderDetails() {
     );
 
     alert("Delivery boy assigned");
-    fetchOrder(); // refresh order
-  } catch (err) {
-    alert(err.response?.data?.message || "Assign failed");
-  }
-};
-
+    fetchOrder();
+  };
 
   /* ================= EDIT ITEM QTY ================= */
   const updateQty = (index, qty) => {
@@ -98,8 +95,8 @@ export default function AdminOrderDetails() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      
-      {/* Back */}
+
+      {/* BACK */}
       <button
         onClick={() => navigate(-1)}
         className="flex items-center gap-2 text-gray-600 mb-6"
@@ -111,36 +108,55 @@ export default function AdminOrderDetails() {
         Order #{order._id.slice(-6)}
       </h1>
 
+      {/* REFUND INFO */}
+      {order.refundStatus !== "none" && (
+        <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-xl mb-6">
+          <p className="font-semibold text-yellow-700">
+            Refund Status:{" "}
+            <span className="capitalize">{order.refundStatus}</span>
+          </p>
+
+          {order.refundAmount && (
+            <p className="text-sm mt-1">
+              Refund Amount: ₹{order.refundAmount}
+            </p>
+          )}
+
+          {order.refundId && (
+            <p className="text-xs text-gray-600 mt-1">
+              Refund ID: {order.refundId}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* CUSTOMER */}
-      {/* CUSTOMER */}
-<div className="bg-white p-5 rounded-xl shadow mb-6">
-  <h3 className="font-semibold mb-2">Customer</h3>
-  <p>Name: {order.customerName}</p>
-  <p>Phone: {order.customerPhone}</p>
-  <p>Payment: {order.paymentMethod}</p>
-</div>
+      <div className="bg-white p-5 rounded-xl shadow mb-6">
+        <h3 className="font-semibold mb-2">Customer</h3>
+        <p>Name: {order.customerName}</p>
+        <p>Phone: {order.customerPhone}</p>
+        <p>Payment: {order.paymentMethod}</p>
+      </div>
 
-{order.orderStatus === "cancelled" && (
-  <div className="bg-red-50 border border-red-200 p-5 rounded-xl shadow mb-6">
-    <h3 className="font-semibold mb-2 text-red-600">
-      Cancellation Details
-    </h3>
+      {/* CANCEL DETAILS */}
+      {order.orderStatus === "cancelled" && (
+        <div className="bg-red-50 border border-red-200 p-5 rounded-xl shadow mb-6">
+          <h3 className="font-semibold mb-2 text-red-600">
+            Cancellation Details
+          </h3>
+          <p>
+            <b>Cancelled By:</b>{" "}
+            <span className="capitalize">
+              {order.cancelledBy || "Unknown"}
+            </span>
+          </p>
+          <p className="mt-1">
+            <b>Reason:</b> {order.cancelReason || "No reason provided"}
+          </p>
+        </div>
+      )}
 
-    <p>
-      <b>Cancelled By:</b>{" "}
-      <span className="capitalize">
-        {order.cancelledBy || "Unknown"}
-      </span>
-    </p>
-
-    <p className="mt-1">
-      <b>Reason:</b>{" "}
-      {order.cancelReason || "No reason provided"}
-    </p>
-  </div>
-)}
-
-      {/* ORDER ITEMS */}
+      {/* ITEMS */}
       <div className="bg-white p-5 rounded-xl shadow mb-6">
         <h3 className="font-semibold mb-4">Items</h3>
 
@@ -156,6 +172,7 @@ export default function AdminOrderDetails() {
               value={item.qty}
               min="1"
               onChange={(e) => updateQty(i, +e.target.value)}
+              disabled={refundInProgress}
               className="w-16 border rounded px-2 py-1"
             />
 
@@ -165,7 +182,12 @@ export default function AdminOrderDetails() {
 
         <button
           onClick={saveEditedOrder}
-          className="mt-4 flex items-center gap-2 bg-orange-500 text-white px-4 py-2 rounded"
+          disabled={refundInProgress}
+          className={`mt-4 flex items-center gap-2 px-4 py-2 rounded text-white ${
+            refundInProgress
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-orange-500"
+          }`}
         >
           <Save /> Save Order Changes
         </button>
@@ -176,25 +198,38 @@ export default function AdminOrderDetails() {
         <h3 className="font-semibold mb-2">Update Status</h3>
 
         <select
-  value={status}
-  onChange={(e) => setStatus(e.target.value)}
-  className="border rounded px-3 py-2"
->
-  <option value="placed">Placed</option>
-  <option value="preparing">Preparing</option>
-  <option value="assigned">Assigned</option> {/* ✅ ADD */}
-  <option value="out_for_delivery">Out for delivery</option>
-  <option value="delivered">Delivered</option>
-  <option value="cancelled">Cancelled</option>
-</select>
-
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          disabled={refundInProgress}
+          className={`border rounded px-3 py-2 ${
+            refundInProgress ? "bg-gray-100 cursor-not-allowed" : ""
+          }`}
+        >
+          <option value="placed">Placed</option>
+          <option value="preparing">Preparing</option>
+          <option value="assigned">Assigned</option>
+          <option value="out_for_delivery">Out for delivery</option>
+          <option value="delivered">Delivered</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
 
         <button
           onClick={updateStatus}
-          className="ml-3 bg-blue-500 text-white px-4 py-2 rounded"
+          disabled={refundInProgress}
+          className={`ml-3 px-4 py-2 rounded text-white ${
+            refundInProgress
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-blue-500"
+          }`}
         >
           Update
         </button>
+
+        {refundInProgress && (
+          <p className="text-sm text-gray-500 mt-2">
+            Status update locked because refund is in progress.
+          </p>
+        )}
       </div>
 
       {/* ASSIGN DELIVERY */}
@@ -204,6 +239,7 @@ export default function AdminOrderDetails() {
         <select
           value={deliveryBoy}
           onChange={(e) => setDeliveryBoy(e.target.value)}
+          disabled={refundInProgress}
           className="border rounded px-3 py-2"
         >
           <option value="">Select Delivery Boy</option>
@@ -215,17 +251,22 @@ export default function AdminOrderDetails() {
         </select>
 
         <button
-  onClick={assignDeliveryBoy}
-  disabled={!deliveryBoy}
-  className={`ml-3 px-4 py-2 rounded text-white ${
-    deliveryBoy
-      ? "bg-green-500 hover:bg-green-600"
-      : "bg-gray-400 cursor-not-allowed"
-  }`}
->
-  Assign
-</button>
+          onClick={assignDeliveryBoy}
+          disabled={!deliveryBoy || refundInProgress}
+          className={`ml-3 px-4 py-2 rounded text-white ${
+            !deliveryBoy || refundInProgress
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-green-500"
+          }`}
+        >
+          Assign
+        </button>
 
+        {refundInProgress && (
+          <p className="text-sm text-gray-500 mt-2">
+            Delivery assignment disabled due to refund.
+          </p>
+        )}
       </div>
     </div>
   );

@@ -4,7 +4,8 @@ import { authorizeRoles } from "../middleware/authMiddleware.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { getAllUsers ,toggleUserStatus,deleteUser,getUserFullDetails,allDeliveryBoys,getDeliveryBoyById,
   updateDeliveryBoy,deleteDeliveryBoy,
-  getAdminDashboard
+  getAdminDashboard,
+  settleDeliveryBoyCOD
 } from "../controller/adminController.js";
 import { getAllOrders ,getDeliveryBoys,assignDeliveryBoy,updateOrderStatus,getOrderById} from "../controller/adminController.js";
 
@@ -43,6 +44,12 @@ router.get(
   protect,
   authorizeRoles("admin"),
   getDeliveryBoyById
+);
+router.post(
+  "/delivery-boy/:id/settle",
+  protect,
+  authorizeRoles("admin"),
+  settleDeliveryBoyCOD
 );
 router.put(
   "/delivery-boy/:id",
@@ -97,12 +104,7 @@ router.get(
   authorizeRoles("admin"),
   getOrderById
 );
-router.get(
-  "/delivery-boys",
-  protect,
-  authorizeRoles("admin"),
-  getDeliveryBoys
-);
+
 router.put(
   "/order/:id/assign",
   protect,

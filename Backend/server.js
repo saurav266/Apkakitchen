@@ -5,8 +5,8 @@ import cookieParser from "cookie-parser";
 import http from "http";
 import { Server } from "socket.io";
 import compression from "compression";
-import mapsRoutes from "./route/map.js";
-
+import location from "./route/location.js"
+import { razorpayWebhook } from "./controller/paymentController.js";
 import { connectDB } from "./db/db.js";
 
 // ===== INIT =====
@@ -17,6 +17,14 @@ const PORT = process.env.PORT || 3000;
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
 // ===== MIDDLEWARE =====
+
+
+app.post(
+  "/api/payment/webhook",
+  express.raw({ type: "application/json" }),
+  razorpayWebhook
+);
+
 app.use(
   cors({
     origin: FRONTEND_URL,
@@ -35,14 +43,17 @@ import authRoute from "./route/authRoute.js";
 import orderRoute from "./route/orderRoute.js";
 import productRoute from "./route/productRoute.js";
 import contactRoutes from "./route/contactRoute.js"
+import paymentRoute from "./route/paymentRoute.js"
 app.use("/api/users", UserRoute);
 app.use("/api/delivery", DeliveryBoyRoute);
 app.use("/api/admin", AdminRoute);
 app.use("/api/auth", authRoute);
 app.use("/api/orders", orderRoute);
 app.use("/api/products", productRoute);
-app.use("/api/maps", mapsRoutes);
+app.use("/api/location", location);
 app.use("/api/contact", contactRoutes);
+app.use("/api/payment", paymentRoute);
+
 // ===== HEALTH CHECK =====
 app.get("/", (req, res) => {
   res.send("🚀 Server API is running");
@@ -62,25 +73,41 @@ export const io = new Server(server, {
 io.on("connection", (socket) => {
   console.log("🔌 Socket connected:", socket.id);
 
-  socket.on("join", ({ userId, role }) => {
-    if (!userId || !role) {
-      console.warn("⚠️ Invalid join attempt:", { userId, role });
-      return;
-    }
+  socket.on("join", ({ role, userId, orderId }) => {
 
     if (role === "admin") {
       socket.join("admin_all");
-      console.log("➡️ Joined room: admin_all");
-    } else {
-      socket.join(`${role}_${userId}`);
-      console.log(`➡️ Joined room: ${role}_${userId}`);
+      console.log("➡️ Joined admin_all");
+    }
+
+    if (role === "delivery" && userId) {
+      socket.join(`delivery_${userId}`);
+      console.log(`➡️ Joined delivery_${userId}`);
+    }
+
+    if (orderId) {
+      socket.join(`order_${orderId}`);
+      console.log(`➡️ Joined order_${orderId}`);
     }
   });
 
+  // 📍 LIVE LOCATION FROM DELIVERY BOY
+socket.on("delivery:location:update", (data) => {
+  if (data.orderId === id) {
+    setLiveLocation({
+      lat: data.lat,
+      lng: data.lng
+    });
+  }
+});
+
+
   socket.on("disconnect", (reason) => {
-    console.log("❌ Socket disconnected:", socket.id, "| reason:", reason);
+    console.log("❌ Socket disconnected:", socket.id, reason);
   });
 });
+
+
 
 // ===== GLOBAL ERROR HANDLER =====
 app.use((err, req, res, next) => {

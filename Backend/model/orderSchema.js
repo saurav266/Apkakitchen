@@ -52,7 +52,16 @@ const orderSchema = new mongoose.Schema(
       enum: ["pending", "paid"],
       default: "pending"
     },
-
+    razorpayOrderId: String,
+    razorpayPaymentId: String,
+    razorpaySignature: String,
+refundStatus: {
+  type: String,
+  enum: ["none", "initiated", "completed", "failed"],
+  default: "none"
+},
+refundId: String,
+refundAmount: Number,
     orderStatus: {
   type: String,
   enum: [
@@ -72,6 +81,13 @@ cancelReason: {
 cancelledBy: {
   type: String,
   enum: ["delivery", "admin", "user"]
+},
+deliveryOtp: {
+  type: String
+},
+deliveryOtpVerified: {
+  type: Boolean,
+  default: false
 },
     deliveryAddress: {
       type: String,

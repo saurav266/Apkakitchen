@@ -1,26 +1,6 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
-/* ================= EARNINGS ================= */
-const earningSchema = new mongoose.Schema(
-  {
-    orderId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Order",
-      required: true
-    },
-    amount: {
-      type: Number,
-      required: true
-    },
-    date: {
-      type: Date,
-      default: Date.now
-    }
-  },
-  { _id: false }
-);
-
 /* ================= ADDRESS ================= */
 const addressSchema = new mongoose.Schema(
   {
@@ -83,15 +63,19 @@ const deliveryBoySchema = new mongoose.Schema(
       default: "offline"
     },
 
-    /* ================= EARNINGS SYSTEM ================= */
-    totalEarnings: {
+    /* ================= COD SETTLEMENT ================= */
+    pendingCOD: {
+      type: Number,
+      default: 0        // 💰 admin must collect this
+    },
+
+    lastSettlementAmount: {
       type: Number,
       default: 0
     },
 
-    earningsHistory: {
-      type: [earningSchema],
-      default: []
+    lastSettlementDate: {
+      type: Date
     },
 
     /* ================= ACCOUNT CONTROL ================= */

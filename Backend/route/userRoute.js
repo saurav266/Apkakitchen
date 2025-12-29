@@ -5,7 +5,8 @@ import {addAddress,
   updateAddress,
   deleteAddress,
   setCurrentAddress,
-  getOrderById
+  getOrderById,
+  cancelOrderByUser
 } from "../controller/userController.js";
 
 const router = express.Router();
@@ -17,6 +18,13 @@ router.post("/reset-password/:token", resetPassword);
 router.get("/profile",protect, getUserProfile);
 router.get("/my-orders", protect, getMyOrders);
 router.get("/order/:id", protect, getOrderById);
+
+router.patch(
+  "/order/:id/cancel",
+  protect,
+  authorizeRoles("user"),
+  cancelOrderByUser
+);
 
 // for addressing CORS issues with cookies
 router.post("/address", protect, authorizeRoles("user"), addAddress);

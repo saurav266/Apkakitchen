@@ -3,6 +3,7 @@ import DeliveryBoy from "../model/deliveryBoySchema.js";
 import Order from "../model/orderSchema.js";
 import { io }  from "../server.js";
 import crypto from "crypto";
+import { autoRefund } from "../utils/autoRefund.js"
 
 
 /**
@@ -391,13 +392,27 @@ export const getDeliveryBoyById = async (req, res) => {
 
 // for order 
 export const getAssignedOrders = async (req, res) => {
-  const orders = await Order.find({
-    deliveryBoy: req.user.id,
-    orderStatus: "out_for_delivery"
-  }).sort({ createdAt: -1 });
+  try {
+    const orders = await Order.find({
+      deliveryBoy: req.user.id,
+      orderStatus: { $in: ["assigned", "out_for_delivery"] }
+    })
+      .sort({ createdAt: -1 })
+      .lean(); // IMPORTANT
 
-  res.json({ success: true, orders });
+    res.json({
+      success: true,
+      orders
+    });
+  } catch (err) {
+    console.error("❌ GET ASSIGNED ORDERS ERROR:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch assigned orders"
+    });
+  }
 };
+
 
 
 
@@ -443,73 +458,151 @@ export const rejectOrder = async (req, res) => {
 
 export const markOrderDelivered = async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id);
+    const { id } = req.params;
+    const { otp } = req.body;
+
+    /* ================= ID VALIDATION ================= */
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid order ID"
+      });
+    }
+
+    /* ================= FIND ORDER ================= */
+    const order = await Order.findById(id);
 
     if (!order) {
-      return res.status(404).json({ message: "Order not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
     }
 
-    // ❌ Prevent double delivery
+    /* ================= AUTH ================= */
+    if (req.user.role !== "delivery") {
+      return res.status(403).json({
+        success: false,
+        message: "Only delivery boy can mark delivered"
+      });
+    }
+
+    /* ================= STATUS CHECK ================= */
     if (order.orderStatus === "delivered") {
-      return res.status(400).json({ message: "Order already delivered" });
+      return res.status(400).json({
+        success: false,
+        message: "Order already delivered"
+      });
     }
 
-    // ✅ Mark order delivered
+    if (order.orderStatus !== "out_for_delivery") {
+      return res.status(400).json({
+        success: false,
+        message: "Order not out for delivery"
+      });
+    }
+
+    /* ================= OTP VERIFICATION ================= */
+    if (order.paymentMethod === "Online") {
+      if (!otp) {
+        return res.status(400).json({
+          success: false,
+          message: "Delivery OTP required"
+        });
+      }
+
+      if (order.deliveryOtpVerified) {
+        return res.status(400).json({
+          success: false,
+          message: "OTP already verified"
+        });
+      }
+
+      if (order.deliveryOtp !== otp) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid OTP"
+        });
+      }
+
+      // ✅ OTP correct
+      order.deliveryOtpVerified = true;
+      order.deliveryOtp = undefined; // remove OTP
+    }
+
+    /* ================= UPDATE ORDER ================= */
     order.orderStatus = "delivered";
-
-    // ✅ 🔥 CRITICAL LINE (FIXES REVENUE)
-    order.paymentStatus = "paid";
-
+    order.paymentStatus = "paid"; // dashboard consistency
     await order.save();
 
+    /* ================= DELIVERY BOY UPDATE ================= */
     const DELIVERY_EARNING = 50;
 
-    // ✅ UPDATE DELIVERY BOY EARNINGS
     if (order.deliveryBoy) {
-      await DeliveryBoy.findByIdAndUpdate(
-        order.deliveryBoy,
-        {
-          $inc: { totalEarnings: DELIVERY_EARNING },
-          $push: {
-            earningsHistory: {
-              orderId: order._id,
-              amount: DELIVERY_EARNING,
-              date: new Date()
-            }
-          },
-          status: "available"
+      const update = {
+        $inc: { totalEarnings: DELIVERY_EARNING },
+        $push: {
+          earningsHistory: {
+            orderId: order._id,
+            amount: DELIVERY_EARNING,
+            date: new Date()
+          }
         },
-        { new: true }
-      );
+        status: "available"
+      };
+
+      // COD → admin collects later
+      if (order.paymentMethod === "COD") {
+        update.$inc.pendingCOD = order.totalAmount;
+      }
+
+      await DeliveryBoy.findByIdAndUpdate(order.deliveryBoy, update);
     }
 
-    // 🔔 Notify admin
-    io.to("admin_all").emit("order-delivered", {
-      orderId: order._id
+    /* ================= SOCKET EVENTS ================= */
+    io.to("admin").emit("order-delivered", {
+      orderId: order._id,
+      amount: order.totalAmount,
+      paymentMethod: order.paymentMethod
     });
 
-    res.json({
+    io.to(`user_${order.userId}`).emit("order-status-updated", {
+      orderId: order._id,
+      status: "delivered"
+    });
+
+    return res.json({
       success: true,
-      message: "Order delivered & earning added",
+      message: "Order delivered successfully",
       earning: DELIVERY_EARNING
     });
 
-  } catch (err) {
-    console.error("Deliver error:", err);
-    res.status(500).json({
+  } catch (error) {
+    console.error("DELIVERY ERROR:", error);
+    return res.status(500).json({
       success: false,
       message: "Server error"
     });
   }
 };
 
-
 // 
 /* ========= DELIVERY BOY CANCEL ORDER ========= */
+
+
+
+
 export const cancelDeliveryOrder = async (req, res) => {
   try {
     const { id } = req.params;
     const { reason } = req.body;
+
+    if (!reason) {
+      return res.status(400).json({
+        success: false,
+        message: "Cancellation reason is required"
+      });
+    }
 
     const order = await Order.findById(id);
 
@@ -520,34 +613,87 @@ export const cancelDeliveryOrder = async (req, res) => {
       });
     }
 
+    /* 🔐 ROLE CHECK */
+    if (req.user.role !== "delivery") {
+      return res.status(403).json({
+        success: false,
+        message: "Only delivery partner can cancel this order"
+      });
+    }
+
+    /* 🔐 OWNERSHIP CHECK */
+    if (
+      !order.deliveryBoy ||
+      order.deliveryBoy.toString() !== req.user.id.toString()
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not assigned to this order"
+      });
+    }
+
+    /* ⛔ ALREADY CANCELLED */
+    if (order.orderStatus === "cancelled") {
+      return res.status(400).json({
+        success: false,
+        message: "Order already cancelled"
+      });
+    }
+
+    /* ⛔ INVALID STATES */
+    if (
+      !["assigned", "out_for_delivery"].includes(order.orderStatus)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Order cannot be cancelled at this stage"
+      });
+    }
+
+    /* 🔁 UPDATE ORDER */
     order.orderStatus = "cancelled";
-    order.cancelReason = reason || "Cancelled by delivery partner";
+    order.cancelReason = reason;
     order.cancelledBy = "delivery";
     order.deliveryBoy = null;
 
     await order.save();
 
-    // 🔔 ADMIN SOCKET ALERT
-    io.to("admin").emit("order-cancelled", {
+    /* 💸 AUTO REFUND (ONLINE ONLY) */
+    if (
+      order.paymentMethod === "Online" &&
+      order.paymentStatus === "paid" &&
+      order.refundStatus === "none"
+    ) {
+      await autoRefund({
+        orderId: order._id,
+        paymentId: order.razorpayPaymentId,
+        amount: order.totalAmount,
+        reason: "Order cancelled by delivery partner"
+      });
+    }
+
+    /* 🔔 ADMIN SOCKET ALERT */
+    io.to("admin_all").emit("order-cancelled", {
       orderId: order._id,
-      cancelledBy: order.cancelledBy,
-      reason: order.cancelReason,
+      cancelledBy: "delivery",
+      reason,
       time: new Date()
     });
 
-    res.json({
+    return res.json({
       success: true,
-      message: "Order cancelled successfully"
+      message: "Order cancelled by delivery partner"
     });
 
   } catch (error) {
-    console.error("CANCEL ERROR:", error);
-    res.status(500).json({
+    console.error("❌ DELIVERY CANCEL ERROR:", error);
+    return res.status(500).json({
       success: false,
       message: "Internal server error"
     });
   }
 };
+
 
 // for erning
 export const getDeliveryEarnings = async (req, res) => {
@@ -720,3 +866,35 @@ export const changeDeliveryPassword = async (req, res) => {
     res.status(500).json({ success: false });
   }
 };
+
+
+export default function DeliveryBoyTracker({ orderId, deliveryBoyId }) {
+
+  useEffect(() => {
+    if (!orderId || !deliveryBoyId) return;
+
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        socket.emit("delivery:location", {
+          orderId,
+          deliveryBoyId,
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          heading: pos.coords.heading,
+          speed: pos.coords.speed,
+          timestamp: Date.now()
+        });
+      },
+      (err) => console.error("GPS error", err),
+      {
+        enableHighAccuracy: true,
+        maximumAge: 2000,
+        timeout: 5000
+      }
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [orderId, deliveryBoyId]);
+
+  return null;
+}

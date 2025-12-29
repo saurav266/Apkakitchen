@@ -3,6 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { ArrowLeft, Edit, Trash2 } from "lucide-react";
 
+const API = import.meta.env.VITE_API_URL || "http://localhost:3000";
+
 /* ======================================================
    MAIN COMPONENT
 ====================================================== */
@@ -11,23 +13,31 @@ export default function AdminDeliveryBoyDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
 
+  const [filter, setFilter] = useState("day");
+
   const [boy, setBoy] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showEdit, setShowEdit] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [settling, setSettling] = useState(false);
 
-  useEffect(() => {
-    fetchDetails();
-  }, []);
+  /* ================= FETCH DETAILS ================= */
 
   const fetchDetails = async () => {
     try {
       const { data } = await axios.get(
-        `http://localhost:3000/api/admin/delivery-boy/${id}`,
-        { withCredentials: true }
+        `${API}/api/admin/delivery-boy/${id}`,
+        {
+          params: { filter }, // ✅ SORTING PARAM
+          withCredentials: true
+        }
       );
-      setBoy(data.deliveryBoy);
+
+      setBoy({
+        ...data.deliveryBoy,
+        orders: data.orders
+      });
     } catch {
       alert("Failed to load delivery boy details");
     } finally {
@@ -35,13 +45,45 @@ export default function AdminDeliveryBoyDetails() {
     }
   };
 
+  useEffect(() => {
+    fetchDetails();
+  }, [filter]);
+
+  /* ================= SETTLEMENT ================= */
+
+ const settleCOD = async () => {
+  if (!boy?._id) {
+    alert("Delivery boy ID missing");
+    return;
+  }
+
+  try {
+    const { data } = await axios.post(
+      `${API}/api/admin/delivery-boy/${boy._id}/settle`,
+      {},
+      {
+        params: { filter },
+        withCredentials: true
+      }
+    );
+
+    alert(`₹${data.settledAmount} settled successfully ✅`);
+    fetchDetails();
+
+  } catch (err) {
+    alert(err.response?.data?.message || "Settlement failed");
+  }
+};
+
+
+
   /* ================= DELETE ================= */
 
   const deleteDeliveryBoy = async () => {
     try {
       setDeleting(true);
       await axios.delete(
-        `http://localhost:3000/api/admin/delivery-boy/${boy._id}`,
+        `${API}/api/admin/delivery-boy/${boy._id}`,
         { withCredentials: true }
       );
 
@@ -87,9 +129,7 @@ export default function AdminDeliveryBoyDetails() {
         </div>
       </div>
 
-      <h1 className="text-3xl font-bold mb-6">
-        🚴 Delivery Boy Details
-      </h1>
+      <h1 className="text-3xl font-bold mb-6">🚴 Delivery Boy Details</h1>
 
       {/* BASIC INFO */}
       <div className="grid md:grid-cols-3 gap-6">
@@ -107,12 +147,51 @@ export default function AdminDeliveryBoyDetails() {
         <AddressCard title="🏠 Permanent Address" address={boy.permanentAddress} />
       </div>
 
+      {/* SORTING FILTER */}
+      <div className="flex gap-3 mt-8">
+        {["day", "week", "month"].map(f => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`px-4 py-2 rounded-full text-sm font-semibold ${
+              filter === f
+                ? "bg-orange-600 text-white"
+                : "bg-gray-200 text-gray-700"
+            }`}
+          >
+            {f.toUpperCase()}
+          </button>
+        ))}
+      </div>
+
       {/* STATS */}
       <div className="grid md:grid-cols-3 gap-6 mt-8">
         <StatCard title="Total Orders" value={boy.totalOrders || 0} />
-        <StatCard title="Total Earnings" value={`₹${boy.totalEarnings || 0}`} />
-        <StatCard title="Joined On" value={boy.createdAt?.slice(0, 10)} />
+
+        <StatCard
+          title="Pending COD (Admin Will Collect)"
+          value={`₹${boy.totalCODCollected || 0}`}
+          highlight
+        />
+
+        <StatCard
+          title="Joined On"
+          value={boy.createdAt?.slice(0, 10)}
+        />
       </div>
+
+      {/* SETTLEMENT */}
+      {boy.totalCODCollected > 0 && (
+        <button
+          onClick={settleCOD}
+          disabled={settling}
+          className="mt-6 bg-green-600 text-white px-6 py-3 rounded-xl font-semibold"
+        >
+          {settling
+            ? "Settling..."
+            : `Settle COD ₹${boy.totalCODCollected}`}
+        </button>
+      )}
 
       {/* ORDERS */}
       <div className="mt-10">
@@ -125,6 +204,7 @@ export default function AdminDeliveryBoyDetails() {
                 <p><b>Order ID:</b> #{order._id.slice(-6)}</p>
                 <p><b>Amount:</b> ₹{order.totalAmount}</p>
                 <p><b>Status:</b> {order.orderStatus}</p>
+                <p><b>Payment:</b> {order.paymentMethod}</p>
               </div>
             ))}
           </div>
@@ -142,7 +222,7 @@ export default function AdminDeliveryBoyDetails() {
         />
       )}
 
-      {/* DELETE CONFIRM MODAL */}
+      {/* DELETE CONFIRM */}
       {confirmDelete && (
         <ConfirmDeleteModal
           name={boy.name}
@@ -156,7 +236,7 @@ export default function AdminDeliveryBoyDetails() {
 }
 
 /* ======================================================
-   EDIT MODAL
+   REUSABLE COMPONENTS (UNCHANGED)
 ====================================================== */
 
 function EditDeliveryBoyModal({ boy, onClose, onUpdated }) {
@@ -172,7 +252,7 @@ function EditDeliveryBoyModal({ boy, onClose, onUpdated }) {
   const submit = async () => {
     try {
       await axios.put(
-        `http://localhost:3000/api/admin/delivery-boy/${boy._id}`,
+        `${API}/api/admin/delivery-boy/${boy._id}`,
         form,
         { withCredentials: true }
       );
@@ -187,17 +267,13 @@ function EditDeliveryBoyModal({ boy, onClose, onUpdated }) {
   const handleAddress = (type, field, value) => {
     setForm({
       ...form,
-      [type]: {
-        ...form[type],
-        [field]: value
-      }
+      [type]: { ...form[type], [field]: value }
     });
   };
 
   return (
     <ModalWrapper>
       <h2 className="text-xl font-bold mb-4">Edit Delivery Boy</h2>
-
       {["name", "phone", "vehicleNumber"].map(f => (
         <input
           key={f}
@@ -207,7 +283,6 @@ function EditDeliveryBoyModal({ boy, onClose, onUpdated }) {
           placeholder={f}
         />
       ))}
-
       <select
         value={form.status}
         onChange={e => setForm({ ...form, status: e.target.value })}
@@ -217,24 +292,6 @@ function EditDeliveryBoyModal({ boy, onClose, onUpdated }) {
         <option value="busy">Busy</option>
         <option value="offline">Offline</option>
       </select>
-
-      {["currentAddress", "permanentAddress"].map(type => (
-        <div key={type} className="mb-4">
-          <h3 className="font-semibold mb-2">
-            {type === "currentAddress" ? "Current Address" : "Permanent Address"}
-          </h3>
-          {["addressLine", "city", "state", "pincode"].map(f => (
-            <input
-              key={f}
-              value={form[type][f] || ""}
-              onChange={e => handleAddress(type, f, e.target.value)}
-              className="w-full border p-2 rounded mb-2"
-              placeholder={f}
-            />
-          ))}
-        </div>
-      ))}
-
       <div className="flex gap-3">
         <button onClick={submit} className="flex-1 bg-orange-600 text-white py-2 rounded">
           Save
@@ -247,10 +304,6 @@ function EditDeliveryBoyModal({ boy, onClose, onUpdated }) {
   );
 }
 
-/* ======================================================
-   REUSABLE COMPONENTS
-====================================================== */
-
 function InfoCard({ title, value }) {
   return (
     <div className="bg-white border rounded-xl p-4">
@@ -260,11 +313,17 @@ function InfoCard({ title, value }) {
   );
 }
 
-function StatCard({ title, value }) {
+function StatCard({ title, value, highlight }) {
   return (
-    <div className="bg-orange-50 border rounded-xl p-4 text-center">
+    <div className={`border rounded-xl p-4 text-center ${
+      highlight ? "bg-red-50 border-red-200" : "bg-orange-50"
+    }`}>
       <p className="text-xs text-gray-500">{title}</p>
-      <p className="text-2xl font-bold text-orange-600">{value}</p>
+      <p className={`text-2xl font-bold ${
+        highlight ? "text-red-600" : "text-orange-600"
+      }`}>
+        {value}
+      </p>
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import axios from "axios";
 import { socket } from "../socket";
 import { useTheme } from "../context/Themecontext.jsx";
-import { Bell, Power, IndianRupee } from "lucide-react";
+import { Bell, Power } from "lucide-react";
 
 const API = "http://localhost:3000";
 
@@ -13,11 +13,15 @@ export default function DeliveryDashboard() {
   const [orders, setOrders] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [online, setOnline] = useState(false);
-  const [earnings, setEarnings] = useState(0);
 
   const [cancelOrder, setCancelOrder] = useState(null);
   const [cancelReason, setCancelReason] = useState("");
   const [customReason, setCustomReason] = useState("");
+
+  /* OTP STATES */
+  const [otpOrder, setOtpOrder] = useState(null);
+  const [otp, setOtp] = useState("");
+  const [otpLoading, setOtpLoading] = useState(false);
 
   /* ================= FETCH ORDERS ================= */
   const fetchOrders = async () => {
@@ -28,19 +32,43 @@ export default function DeliveryDashboard() {
     setOrders(res.data.orders || []);
   };
 
-  /* ================= FETCH EARNINGS ================= */
-  const fetchEarnings = async () => {
-    const res = await axios.get(
-      `${API}/api/delivery/earnings`,
-      { withCredentials: true }
-    );
-    setEarnings(res.data.todayEarnings || 0);
-  };
-
   useEffect(() => {
     fetchOrders();
-    fetchEarnings();
   }, []);
+
+  /* ================= LOCATION TRACKING ================= */
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+
+    const watchId = navigator.geolocation.watchPosition(
+      pos => {
+        orders
+          .filter(o => o.orderStatus === "out_for_delivery")
+          .forEach(order => {
+            socket.emit("delivery:location", {
+              orderId: order._id,
+              lat: pos.coords.latitude,
+              lng: pos.coords.longitude
+            });
+          });
+      },
+      console.error,
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [orders]);
+
+  useEffect(() => {
+    orders
+      .filter(o => o.orderStatus === "out_for_delivery")
+      .forEach(o => {
+        socket.emit("join", {
+          role: "delivery",
+          orderId: o._id
+        });
+      });
+  }, [orders]);
 
   /* ================= SOCKET ================= */
   useEffect(() => {
@@ -65,24 +93,63 @@ export default function DeliveryDashboard() {
   };
 
   /* ================= ACTIONS ================= */
-  const acceptOrder = async (id) => {
-    await axios.post(`${API}/api/delivery/orders/${id}/accept`, {}, { withCredentials: true });
+  const acceptOrder = async id => {
+    await axios.post(
+      `${API}/api/delivery/orders/${id}/accept`,
+      {},
+      { withCredentials: true }
+    );
     fetchOrders();
   };
 
-  const rejectOrder = async (id) => {
-    await axios.post(`${API}/api/delivery/orders/${id}/reject`, {}, { withCredentials: true });
+  const rejectOrder = async id => {
+    await axios.post(
+      `${API}/api/delivery/orders/${id}/reject`,
+      {},
+      { withCredentials: true }
+    );
     setOrders(prev => prev.filter(o => o._id !== id));
   };
 
-  const markDelivered = async (id) => {
-    await axios.post(`${API}/api/delivery/orders/${id}/delivered`, {}, { withCredentials: true });
-    setOrders(prev => prev.filter(o => o._id !== id));
-    fetchEarnings();
+  /* ================= OTP DELIVERY ================= */
+  const openOtpModal = order => {
+    setOtpOrder(order);
+    setOtp("");
   };
 
+  const verifyOtpAndDeliver = async () => {
+    if (!otp || otp.length !== 6) {
+      return alert("Enter valid 6-digit OTP");
+    }
+
+    try {
+      setOtpLoading(true);
+
+      await axios.post(
+  `${API}/api/delivery/orders/${otpOrder._id}/delivered`,
+  { otp },
+  { withCredentials: true }
+);
+
+
+      alert("Order delivered successfully");
+
+      setOrders(prev => prev.filter(o => o._id !== otpOrder._id));
+      setOtpOrder(null);
+      setOtp("");
+      fetchOrders();
+    } catch (err) {
+      alert(err.response?.data?.message || "Invalid OTP");
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  /* ================= CANCEL DELIVERY ================= */
   const cancelAcceptedOrder = async () => {
-    const finalReason = cancelReason === "Other" ? customReason.trim() : cancelReason;
+    const finalReason =
+      cancelReason === "Other" ? customReason.trim() : cancelReason;
+
     if (!finalReason) return alert("Please provide reason");
 
     await axios.post(
@@ -98,7 +165,11 @@ export default function DeliveryDashboard() {
   };
 
   return (
-    <section className={`min-h-screen pt-6 pb-24 px-4 ${dark ? "bg-slate-900 text-white" : "bg-orange-50"}`}>
+    <section
+      className={`min-h-screen pt-6 pb-24 px-4 ${
+        dark ? "bg-slate-900 text-white" : "bg-orange-50"
+      }`}
+    >
       <div className="max-w-md mx-auto space-y-6">
 
         {/* HEADER */}
@@ -110,22 +181,15 @@ export default function DeliveryDashboard() {
           <button
             onClick={toggleOnline}
             className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm ${
-              online ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-600"
+              online
+                ? "bg-green-100 text-green-700"
+                : "bg-gray-200 text-gray-600"
             }`}
           >
             <Power className="w-4 h-4" />
             {online ? "Online" : "Offline"}
           </button>
         </div>
-
-        {/* EARNINGS */}
-        <motion.div className={`rounded-2xl p-5 flex justify-between ${dark ? "bg-slate-800" : "bg-white"}`}>
-          <div>
-            <p className="text-sm text-gray-400">Today’s Earnings</p>
-            <p className="text-2xl font-bold text-orange-600">₹{earnings}</p>
-          </div>
-          <IndianRupee className="w-10 h-10 text-orange-400" />
-        </motion.div>
 
         {/* ORDERS */}
         <div>
@@ -135,7 +199,9 @@ export default function DeliveryDashboard() {
           </h3>
 
           {orders.length === 0 ? (
-            <p className="text-center text-gray-500">No active orders 🚴‍♂️</p>
+            <p className="text-center text-gray-500">
+              No active orders 🚴‍♂️
+            </p>
           ) : (
             orders.map(order => (
               <OrderCard
@@ -144,7 +210,7 @@ export default function DeliveryDashboard() {
                 dark={dark}
                 onAccept={acceptOrder}
                 onReject={rejectOrder}
-                onDeliver={markDelivered}
+                onDeliver={openOtpModal}
                 onCancel={setCancelOrder}
                 onView={() => setSelectedOrder(order)}
               />
@@ -152,37 +218,39 @@ export default function DeliveryDashboard() {
           )}
         </div>
 
-        {/* VIEW DETAILS MODAL */}
-        {selectedOrder && (
-          <div
-            className="fixed inset-0 z-[1000] bg-black/50 flex items-center justify-center"
-            onClick={() => setSelectedOrder(null)}
-          >
-            <div
-              onClick={e => e.stopPropagation()}
-              className="bg-white text-black rounded-2xl p-6 w-[90%] max-w-md"
-            >
-              <h3 className="text-xl font-bold mb-3">Order Details</h3>
-              <p><b>Name:</b> {selectedOrder.customerName}</p>
-              <p><b>Phone:</b> {selectedOrder.customerPhone}</p>
-              <p><b>Address:</b> {selectedOrder.deliveryAddress}</p>
+        {/* OTP MODAL */}
+        {otpOrder && (
+          <div className="fixed inset-0 z-[1002] bg-black/50 flex items-center justify-center">
+            <div className="bg-white text-black rounded-2xl p-6 w-[90%] max-w-md">
+              <h3 className="text-xl font-bold mb-3">
+                Enter Delivery OTP
+              </h3>
 
-              <h4 className="font-semibold mt-3 mb-2">Items</h4>
-              {selectedOrder.items.map((i, idx) => (
-                <div key={idx} className="flex justify-between text-sm">
-                  <span>{i.name} × {i.quantity}</span>
-                  <span>₹{i.price * i.quantity}</span>
-                </div>
-              ))}
+              <input
+                type="number"
+                value={otp}
+                onChange={e => setOtp(e.target.value)}
+                placeholder="6-digit OTP"
+                className="w-full border rounded-lg p-3 text-center text-xl tracking-widest"
+              />
 
-              <p className="font-bold mt-3">Total: ₹{selectedOrder.totalAmount}</p>
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={() => setOtpOrder(null)}
+                  className="flex-1 bg-gray-200 py-2 rounded-xl"
+                  disabled={otpLoading}
+                >
+                  Cancel
+                </button>
 
-              <button
-                onClick={() => setSelectedOrder(null)}
-                className="mt-4 w-full bg-black text-white py-2 rounded-xl"
-              >
-                Close
-              </button>
+                <button
+                  onClick={verifyOtpAndDeliver}
+                  disabled={otpLoading}
+                  className="flex-1 bg-green-600 text-white py-2 rounded-xl"
+                >
+                  {otpLoading ? "Verifying..." : "Confirm Delivery"}
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -201,7 +269,9 @@ export default function DeliveryDashboard() {
                 <option value="">Select reason</option>
                 <option value="Vehicle issue">Vehicle issue</option>
                 <option value="Medical emergency">Medical emergency</option>
-                <option value="Customer unreachable">Customer unreachable</option>
+                <option value="Customer unreachable">
+                  Customer unreachable
+                </option>
                 <option value="Traffic issue">Traffic issue</option>
                 <option value="Other">Other</option>
               </select>
@@ -245,30 +315,38 @@ function OrderCard({ order, onAccept, onReject, onDeliver, onCancel, onView, dar
   const isAssigned = order.orderStatus === "assigned";
   const isAccepted = order.orderStatus === "out_for_delivery";
 
-  const openMaps = () => {
-    window.open(
-      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.deliveryAddress)}`,
-      "_blank"
-    );
-  };
-
   return (
-    <motion.div className={`rounded-2xl p-5 mb-4 ${dark ? "bg-slate-800" : "bg-white"}`}>
+    <motion.div
+      className={`rounded-2xl p-5 mb-4 ${
+        dark ? "bg-slate-800" : "bg-white"
+      }`}
+    >
       <p className="font-semibold text-lg">{order.customerName}</p>
       <p className="text-sm">📞 {order.customerPhone}</p>
-      <p className="text-sm font-semibold text-orange-600 mt-1">₹{order.totalAmount}</p>
+      <p className="text-sm font-semibold text-orange-600 mt-1">
+        ₹{order.totalAmount}
+      </p>
 
       <div className="flex gap-2 mt-4 flex-wrap">
-        <button onClick={() => onView()} className="w-full bg-gray-200 py-2 rounded-xl font-semibold">
+        <button
+          onClick={onView}
+          className="w-full bg-gray-200 py-2 rounded-xl font-semibold"
+        >
           View Details
         </button>
 
         {isAssigned && (
           <>
-            <button onClick={() => onAccept(order._id)} className="flex-1 bg-green-600 text-white py-2 rounded-xl">
+            <button
+              onClick={() => onAccept(order._id)}
+              className="flex-1 bg-green-600 text-white py-2 rounded-xl"
+            >
               Accept
             </button>
-            <button onClick={() => onReject(order._id)} className="flex-1 bg-red-500 text-white py-2 rounded-xl">
+            <button
+              onClick={() => onReject(order._id)}
+              className="flex-1 bg-red-500 text-white py-2 rounded-xl"
+            >
               Reject
             </button>
           </>
@@ -276,13 +354,16 @@ function OrderCard({ order, onAccept, onReject, onDeliver, onCancel, onView, dar
 
         {isAccepted && (
           <>
-            <button onClick={openMaps} className="flex-1 bg-yellow-500 py-2 rounded-xl">
-              📍 Track
+            <button
+              onClick={() => onDeliver(order)}
+              className="flex-1 bg-blue-600 text-white py-2 rounded-xl"
+            >
+              Delivered (OTP)
             </button>
-            <button onClick={() => onDeliver(order._id)} className="flex-1 bg-blue-600 text-white py-2 rounded-xl">
-              Delivered
-            </button>
-            <button onClick={() => onCancel(order)} className="w-full bg-red-600 text-white py-2 rounded-xl">
+            <button
+              onClick={() => onCancel(order)}
+              className="w-full bg-red-600 text-white py-2 rounded-xl"
+            >
               Cancel Delivery
             </button>
           </>

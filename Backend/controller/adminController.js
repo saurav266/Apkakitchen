@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import Admin from "../model/adminSchema.js";
 import 'dotenv/config';
 import Order from "../model/orderSchema.js";
+import { autoRefund } from "../utils/autoRefund.js";
 import jwt from "jsonwebtoken";
 import User from "../model/userSchema.js";
 import DeliveryBoy from "../model/deliveryBoySchema.js";
@@ -290,12 +291,36 @@ export const allDeliveryBoys= async (req, res) => {
   }
 };
 
+
 export const getDeliveryBoyById = async (req, res) => {
   try {
     const { id } = req.params;
+    const { filter = "day" } = req.query;
 
+    /* ================= DATE RANGE ================= */
+    let startDate = new Date();
+    let endDate = new Date();
+
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(23, 59, 59, 999);
+
+    if (filter === "week") {
+      startDate.setDate(startDate.getDate() - 6);
+    }
+
+    if (filter === "month") {
+      startDate = new Date(
+        startDate.getFullYear(),
+        startDate.getMonth(),
+        1,
+        0, 0, 0, 0
+      );
+    }
+
+    /* ================= DELIVERY BOY ================= */
     const deliveryBoy = await DeliveryBoy.findById(id)
-      .select("-password -aadhaarNumber"); // ❌ hide sensitive data
+      .select("-password -aadhaarNumber")
+      .lean();
 
     if (!deliveryBoy) {
       return res.status(404).json({
@@ -304,9 +329,26 @@ export const getDeliveryBoyById = async (req, res) => {
       });
     }
 
+    /* ================= ORDERS (FOR DISPLAY ONLY) ================= */
+    const orders = await Order.find({
+      deliveryBoy: id,
+      orderStatus: "delivered",
+      createdAt: { $gte: startDate, $lte: endDate }
+    })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    /* ================= ✅ PENDING COD (SOURCE OF TRUTH) ================= */
+    const totalCODCollected = deliveryBoy.pendingCOD || 0;
+
     return res.status(200).json({
       success: true,
-      deliveryBoy
+      deliveryBoy: {
+        ...deliveryBoy,
+        totalOrders: orders.length,
+        totalCODCollected
+      },
+      orders
     });
 
   } catch (error) {
@@ -317,6 +359,54 @@ export const getDeliveryBoyById = async (req, res) => {
     });
   }
 };
+
+
+export const settleDeliveryBoyCOD = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deliveryBoy = await DeliveryBoy.findById(id);
+
+    if (!deliveryBoy) {
+      return res.status(404).json({
+        success: false,
+        message: "Delivery boy not found"
+      });
+    }
+
+    if (deliveryBoy.pendingCOD <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No pending COD to settle"
+      });
+    }
+
+    const settledAmount = deliveryBoy.pendingCOD;
+
+    // ✅ RESET PENDING COD
+    deliveryBoy.pendingCOD = 0;
+    deliveryBoy.lastSettlementAmount = settledAmount;
+    deliveryBoy.lastSettlementDate = new Date();
+
+    await deliveryBoy.save();
+
+    return res.status(200).json({
+      success: true,
+      settledAmount
+    });
+
+  } catch (error) {
+    console.error("Settlement Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Settlement failed"
+    });
+  }
+};
+ 
+
+
+
 
 export const editDeliveryBoyProfile = async (req, res) => {
   try {
@@ -501,6 +591,14 @@ export const getOrderById = async (req, res) => {
   try {
     const { id } = req.params;
 
+    // ✅ CRITICAL: Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid order ID"
+      });
+    }
+
     const order = await Order.findById(id)
       .populate("userId", "name phone address")
       .populate("deliveryBoy", "name phone vehicleNumber status");
@@ -512,12 +610,14 @@ export const getOrderById = async (req, res) => {
       });
     }
 
-    res.json({
+    return res.json({
       success: true,
       order
     });
+
   } catch (error) {
-    res.status(500).json({
+    console.error("GET ORDER BY ID ERROR:", error);
+    return res.status(500).json({
       success: false,
       message: "Failed to fetch order"
     });
@@ -545,7 +645,7 @@ export const assignDeliveryBoy = async (req, res) => {
     /* ================= DELIVERY BOY ================= */
     const boy = await DeliveryBoy.findByIdAndUpdate(
       deliveryBoy,
-      { status: "busy" },
+      { status: "available" },
       { new: true }
     );
 
@@ -617,6 +717,7 @@ export const getDeliveryBoys = async (req, res) => {
 export const updateOrderStatus = async (req, res) => {
   try {
     const { status } = req.body;
+
     const order = await Order.findById(req.params.id).populate("deliveryBoy");
 
     if (!order) {
@@ -626,10 +727,11 @@ export const updateOrderStatus = async (req, res) => {
       });
     }
 
+    /* ================= UPDATE STATUS ================= */
     order.orderStatus = status;
     await order.save();
 
-    /* If delivered or cancelled → free delivery boy */
+    /* ================= FREE DELIVERY BOY ================= */
     if (
       ["delivered", "cancelled"].includes(status) &&
       order.deliveryBoy
@@ -638,12 +740,29 @@ export const updateOrderStatus = async (req, res) => {
       await order.deliveryBoy.save();
     }
 
+    /* ================= AUTO REFUND LOGIC ================= */
+    if (
+      status === "cancelled" &&
+      order.paymentMethod === "Online" &&
+      order.paymentStatus === "paid" &&
+      order.refundStatus === "none"
+    ) {
+      await autoRefund({
+        orderId: order._id,
+        paymentId: order.razorpayPaymentId,
+        amount: order.totalAmount,
+        reason: "Order cancelled"
+      });
+    }
+
     res.json({
       success: true,
       message: "Order status updated",
       order
     });
+
   } catch (error) {
+    console.error("UPDATE ORDER STATUS ERROR:", error);
     res.status(500).json({
       success: false,
       message: "Server error"
@@ -651,61 +770,59 @@ export const updateOrderStatus = async (req, res) => {
   }
 };
 
-
 export const getAdminDashboard = async (req, res) => {
   try {
     const { filter = "day", from, to } = req.query;
 
-    /* ================= DATE RANGE ================= */
-    let startDate = new Date();
-    if (filter === "week") startDate.setDate(startDate.getDate() - 7);
-    if (filter === "month") startDate.setMonth(startDate.getMonth() - 1);
-    if (filter === "year") startDate.setFullYear(startDate.getFullYear() - 1);
+    let startDate;
+    let endDate = new Date();
 
+    /* ================= DATE RANGE ================= */
     if (from && to) {
       startDate = new Date(from);
+      endDate = new Date(to);
+      endDate.setHours(23, 59, 59, 999);
+    } else {
+      startDate = new Date();
+      startDate.setHours(0, 0, 0, 0);
+
+      if (filter === "week") {
+        startDate.setDate(startDate.getDate() - 6);
+      }
+      if (filter === "month") {
+        startDate.setDate(1);
+      }
+      if (filter === "year") {
+        startDate = new Date(new Date().getFullYear(), 0, 1);
+      }
     }
 
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
+    /* ================= FILTER QUERY ================= */
+    const dateMatch = {
+      createdAt: { $gte: startDate, $lte: endDate }
+    };
 
-    /* ================= TOTAL ORDERS ================= */
-    const totalOrders = await Order.countDocuments();
+    /* ================= ORDERS ================= */
+    const orders = await Order.find(dateMatch);
 
-    const todayOrders = await Order.countDocuments({
-      createdAt: { $gte: todayStart }
-    });
+    const todayOrders = orders.length;
 
-    /* ================= TOTAL USERS ================= */
+    /* ================= REVENUE ================= */
+    const todayRevenue = orders
+      .filter(
+        o =>
+          o.orderStatus === "delivered" &&
+          (o.paymentMethod === "COD" ||
+            (o.paymentMethod === "Online" && o.paymentStatus === "paid"))
+      )
+      .reduce((sum, o) => sum + o.totalAmount, 0);
+
+    /* ================= USERS ================= */
     const totalUsers = await User.countDocuments();
 
-    /* ================= TODAY REVENUE ================= */
-    const todayRevenueAgg = await Order.aggregate([
-      {
-        $match: {
-          updatedAt: { $gte: todayStart },
-          orderStatus: "delivered",
-          $or: [
-            { paymentMethod: "Online", paymentStatus: "paid" },
-            { paymentMethod: "COD" }
-          ]
-        }
-      },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: "$totalAmount" }
-        }
-      }
-    ]);
-
-    const todayRevenue = todayRevenueAgg[0]?.total || 0;
+    const totalOrders = await Order.countDocuments();
 
     /* ================= STATUS COUNTS ================= */
-    const statusAgg = await Order.aggregate([
-      { $group: { _id: "$orderStatus", count: { $sum: 1 } } }
-    ]);
-
     const statusCounts = {
       placed: 0,
       preparing: 0,
@@ -715,58 +832,55 @@ export const getAdminDashboard = async (req, res) => {
       cancelled: 0
     };
 
-    statusAgg.forEach(s => {
-      if (statusCounts[s._id] !== undefined) {
-        statusCounts[s._id] = s.count;
+    orders.forEach(o => {
+      statusCounts[o.orderStatus]++;
+    });
+
+    /* ================= PAYMENT SPLIT ================= */
+    const paymentSplit = { cod: 0, online: 0 };
+
+    orders.forEach(o => {
+      if (o.orderStatus !== "delivered") return;
+
+      if (o.paymentMethod === "COD") {
+        paymentSplit.cod += o.totalAmount;
+      }
+      if (o.paymentMethod === "Online" && o.paymentStatus === "paid") {
+        paymentSplit.online += o.totalAmount;
       }
     });
 
-    /* ================= CHARTS ================= */
-    const chartAgg = await Order.aggregate([
-      {
-        $match: {
-          updatedAt: { $gte: startDate },
-          orderStatus: "delivered"
-        }
-      },
-      {
-        $group: {
-          _id: {
-            $dateToString: {
-              format: "%Y-%m-%d",
-              date: "$updatedAt"
-            }
-          },
-          orders: { $sum: 1 },
-          revenue: { $sum: "$totalAmount" }
-        }
-      },
-      { $sort: { _id: 1 } }
-    ]);
+    /* ================= CHART DATA ================= */
+    const chartMap = {};
 
-    /* ================= PAYMENT SPLIT ================= */
-    const paymentAgg = await Order.aggregate([
-  {
-    $match: {
-      orderStatus: "delivered",
-      paymentStatus: "paid" // ✅ ONE RULE FOR ALL
-    }
-  },
-  {
-    $group: {
-      _id: "$paymentMethod",
-      amount: { $sum: "$totalAmount" }
-    }
-  }
-]);
+    orders.forEach(o => {
+      if (o.orderStatus !== "delivered") return;
 
-const paymentSplit = { cod: 0, online: 0 };
+      const key = o.createdAt.toISOString().slice(0, 10);
 
-paymentAgg.forEach(p => {
-  if (p._id === "COD") paymentSplit.cod = p.amount;
-  if (p._id === "Online") paymentSplit.online = p.amount;
-});
+      if (!chartMap[key]) {
+        chartMap[key] = { orders: 0, revenue: 0 };
+      }
 
+      chartMap[key].orders += 1;
+      chartMap[key].revenue += o.totalAmount;
+    });
+
+    const ordersChart = [];
+    const revenueChart = [];
+
+    Object.keys(chartMap)
+      .sort()
+      .forEach(date => {
+        ordersChart.push({
+          name: date,
+          orders: chartMap[date].orders
+        });
+        revenueChart.push({
+          name: date,
+          revenue: chartMap[date].revenue
+        });
+      });
 
     /* ================= RESPONSE ================= */
     res.json({
@@ -778,10 +892,10 @@ paymentAgg.forEach(p => {
         totalUsers
       },
       statusCounts,
-      paymentSplit, // ✅ CRITICAL FIX
+      paymentSplit,
       charts: {
-        orders: chartAgg.map(i => ({ name: i._id, orders: i.orders })),
-        revenue: chartAgg.map(i => ({ name: i._id, revenue: i.revenue }))
+        orders: ordersChart,
+        revenue: revenueChart
       }
     });
 
