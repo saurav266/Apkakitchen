@@ -18,6 +18,7 @@ import authRoute from './route/authRoute.js';
 import orderRoute from './route/orderRoute.js';
 import productRoute from './route/productRoute.js';
 import contactRoutes from './route/contactRoute.js';
+import reviewRoutes from './route/reviewRoute.js';
 
 app.use(
   cors({
@@ -37,6 +38,8 @@ app.use('/api/auth', authRoute);
 app.use('/api/orders', orderRoute);
 app.use('/api/products', productRoute);
 app.use("/api/contact", contactRoutes);
+app.use("/api/reviews", reviewRoutes);
+
 
 app.get('/', (req, res) => {
     res.send('Welcome to the Serger API!');

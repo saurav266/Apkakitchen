@@ -4,8 +4,9 @@ import {
   getAllProducts,
   getProductById,
   updateProduct,
-  deleteProduct
-} from "../controller/ProductController.js";
+  deleteProduct,
+  getPopularProducts
+} from "../controller/productController.js";
 
 import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
 
@@ -21,5 +22,6 @@ router.get("/:id", getProductById);
 router.post("/add", protect, authorizeRoles("admin"), addProduct);
 router.put("/:id", protect, authorizeRoles("admin"), updateProduct);
 router.delete("/:id", protect, authorizeRoles("admin"), deleteProduct);
+router.post("/popular", getPopularProducts);
 
 export default router;
