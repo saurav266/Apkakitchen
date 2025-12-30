@@ -3,6 +3,7 @@ import { MapPin, Phone, Mail, Send, MessageCircle } from "lucide-react";
 import { useState } from "react";
 import Footer from "../User-Components/Footer.jsx";
 
+
 export default function Contact() {
   const [form, setForm] = useState({
     name: "",
@@ -35,7 +36,6 @@ export default function Contact() {
   return (
     <>
     <section className="relative min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-red-50 pt-28 pb-20 overflow-hidden">
-
       {/* 🌈 Background Blobs */}
       <div className="absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute -top-32 -left-32 w-96 h-96 bg-orange-300/30 rounded-full blur-3xl" />

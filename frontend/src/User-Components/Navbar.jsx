@@ -80,99 +80,96 @@ export default function Navbar() {
           </nav>
 
           {/* RIGHT SIDE */}
-          <div className="hidden md:flex items-center gap-6">
-            {/* CART */}
-            <motion.button
-              onClick={() => navigate("/cart")}
-              animate={
-                shake
-                  ? { rotate: [0, -15, 15, -10, 10, 0] }
-                  : { rotate: 0 }
-              }
-              transition={{ duration: 0.5 }}
-              className="relative"
-            >
-              <ShoppingCart className="w-6 h-6 text-white" />
-              {cartCount > 0 && (
-                <span className="absolute -top-2 -right-2 w-5 h-5 bg-yellow-300 text-red-900 text-xs font-bold rounded-full flex items-center justify-center">
-                  {cartCount}
-                </span>
-              )}
-            </motion.button>
+<div className="hidden md:flex items-center gap-6">
 
-            {/* USER DROPDOWN */}
-            {user ? (
-              <div className="relative group">
-                <motion.div
-                  whileHover={{ scale: 1.1 }}
-                  className="cursor-pointer"
-                >
-                  <User className="w-6 h-6 text-white" />
-                </motion.div>
+  {/* USER DROPDOWN */}
+  {user ? (
+    <div className="relative group">
+      <motion.div
+        whileHover={{ scale: 1.1 }}
+        transition={{ type: "spring", stiffness: 300 }}
+        className="cursor-pointer"
+      >
+        <User className="w-6 h-6 text-white" />
+      </motion.div>
 
-                {/* Premium Dropdown */}
-                <motion.div
-                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ duration: 0.2 }}
-                  className="
-                    absolute right-0 mt-3
-                    min-w-[180px]
-                    rounded-2xl
-                    bg-white/90 backdrop-blur-xl
-                    shadow-[0_20px_40px_rgba(0,0,0,0.25)]
-                    border border-white/40
-                    z-[999]
-                    opacity-0 invisible
-                    group-hover:opacity-100 group-hover:visible
-                    transition-all
-                  "
-                >
-                  <button
-                    onClick={() => navigate("/profile")}
-                    className="flex items-center gap-3 w-full px-4 py-3 text-sm hover:bg-orange-100 rounded-t-2xl transition"
-                  >
-                    <UserCircle className="w-4 h-4 text-red-700" />
-                    Profile
-                  </button>
+      <div
+        className="
+          absolute right-0 mt-1
+          min-w-[180px]
+          rounded-2xl
+          bg-white/95 backdrop-blur-xl
+          shadow-[0_20px_40px_rgba(0,0,0,0.25)]
+          border border-white/40
+          z-[999]
 
-                  <button
-                    onClick={() => navigate("/order")}
-                    className="flex items-center gap-3 w-full px-4 py-3 text-sm hover:bg-orange-100 transition"
-                  >
-                    <Package className="w-4 h-4 text-red-700" />
-                    My Orders
-                  </button>
+          opacity-0 translate-y-2 scale-95
+          pointer-events-none
 
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center gap-3 w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50 rounded-b-2xl transition"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    Logout
-                  </button>
-                </motion.div>
-              </div>
-            ) : (
-              <button
-                onClick={() => navigate("/login")}
-                className="flex items-center gap-2 text-white"
-              >
-                <User className="w-6 h-6" />
-                <span className="text-sm">Login</span>
-              </button>
-            )}
+          group-hover:opacity-100
+          group-hover:translate-y-0
+          group-hover:scale-100
+          group-hover:pointer-events-auto
 
-            {/* ORDER NOW */}
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => navigate("/menu")}
-              className="px-6 py-2 rounded-full bg-yellow-300 text-red-900 font-semibold shadow-lg"
-            >
-              Order Now
-            </motion.button>
-          </div>
+          transition-all duration-200 ease-out
+        "
+      >
+        <button
+          onClick={() => navigate("/profile")}
+          className="flex items-center gap-3 w-full px-4 py-3 text-sm hover:bg-orange-100 rounded-t-2xl transition"
+        >
+          <UserCircle className="w-4 h-4 text-red-700" />
+          Profile
+        </button>
+
+        <button
+          onClick={() => navigate("/order")}
+          className="flex items-center gap-3 w-full px-4 py-3 text-sm hover:bg-orange-100 transition"
+        >
+          <Package className="w-4 h-4 text-red-700" />
+          My Orders
+        </button>
+
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50 rounded-b-2xl transition"
+        >
+          <LogOut className="w-4 h-4" />
+          Logout
+        </button>
+      </div>
+    </div>
+  ) : (
+    <button
+      onClick={() => navigate("/login")}
+      className="flex items-center gap-2 text-white"
+    >
+      <User className="w-6 h-6" />
+      <span className="text-sm">Login</span>
+    </button>
+  )}
+
+  {/* CART */}
+  <motion.button
+    onClick={() => navigate("/cart")}
+    animate={
+      shake
+        ? { rotate: [0, -15, 15, -10, 10, 0] }
+        : { rotate: 0 }
+    }
+    transition={{ duration: 0.5 }}
+    className="relative"
+  >
+    <ShoppingCart className="w-6 h-6 text-white" />
+    {cartCount > 0 && (
+      <span className="absolute -top-2 -right-2 w-5 h-5 bg-yellow-300 text-red-900 text-xs font-bold rounded-full flex items-center justify-center">
+        {cartCount}
+      </span>
+    )}
+  </motion.button>
+
+</div>
+
 
           {/* MOBILE TOGGLE */}
           <button
@@ -205,7 +202,11 @@ export default function Navbar() {
               ))}
 
               {user ? (
-                <button onClick={handleLogout}>Logout</button>
+                <>
+                  <button onClick={() => navigate("/profile")}>Profile</button>
+                  <button onClick={() => navigate("/order")}>My Orders</button>
+                  <button onClick={handleLogout}>Logout</button>
+                </>
               ) : (
                 <button onClick={() => navigate("/login")}>Login</button>
               )}
