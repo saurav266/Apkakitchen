@@ -165,6 +165,22 @@ export default function Contact() {
                 <MessageCircle className="w-6 h-6" />
                 <span>Chat on WhatsApp</span>
               </motion.a>
+              {/* 🗺️ Map with Overlay */}
+              <div className="relative bg-white rounded-2xl shadow-lg overflow-hidden border border-orange-100 h-60 group">
+                {/* Google Maps Embed */}
+                <iframe
+                  title="Apna Kitchen Location"
+                  className="w-full h-full border-0"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  src="https://maps.google.com/maps?q=Purulia%20Road%20Near%20AG%20Church%20Kanta%20Toli%20Ranchi%20834001%20Jharkhand&t=&z=16&ie=UTF8&iwloc=&output=embed"
+                />
+
+                {/* Overlay on Hover */}
+                <div className="absolute inset-0 bg-black/30 flex items-center justify-center text-white font-semibold opacity-0 group-hover:opacity-100 transition">
+                  Find Us Here 📍
+                </div>
+              </div>
             </div>
           </div>
         </div>
