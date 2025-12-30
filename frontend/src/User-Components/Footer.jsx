@@ -1,5 +1,5 @@
 import { MapPin, Phone, Mail, Instagram, Facebook, Twitter, Heart } from "lucide-react";
-import logo from "../assets/logo/logo.png";
+import logo from "../assets/logo/logo.webp";
 export default function Footer() {
   return (
     <footer className="bg-orange-50 text-gray-700 pt-16 pb-10">
