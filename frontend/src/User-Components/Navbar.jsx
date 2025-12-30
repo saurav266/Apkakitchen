@@ -308,4 +308,5 @@ const Navbar = memo(function Navbar() {
   );
 }
 
+);
 export default Navbar;
