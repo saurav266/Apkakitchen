@@ -1,4 +1,8 @@
 # Logs
+# Environment variables (CRITICAL)
+.env
+.env.*
+!.env.example
 logs
 *.log
 npm-debug.log*

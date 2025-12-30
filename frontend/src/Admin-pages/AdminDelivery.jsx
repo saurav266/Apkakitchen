@@ -2,16 +2,19 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import { Phone, MapPin, Plus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 /* ======================================================
    MAIN COMPONENT
 ====================================================== */
 
 export default function AdminDeliveryManagement() {
+  const navigate = useNavigate(); // ✅ FIXED (INSIDE COMPONENT)
+
   const [boys, setBoys] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showOtpModal, setShowOtpModal] = useState(false);
-  const [otpToken, setOtpToken] = useState(null); // ✅ FIX
+  const [otpToken, setOtpToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -25,8 +28,8 @@ export default function AdminDeliveryManagement() {
         { withCredentials: true }
       );
       setBoys(data.deliveryBoys || []);
-    } catch {
-      console.error("Failed to load delivery boys");
+    } catch (err) {
+      console.error("Failed to load delivery boys", err);
     } finally {
       setLoading(false);
     }
@@ -42,7 +45,7 @@ export default function AdminDeliveryManagement() {
         { withCredentials: true }
       );
 
-      setOtpToken(data.otpToken); // ✅ FIX
+      setOtpToken(data.otpToken);
       setShowAddModal(false);
       setShowOtpModal(true);
 
@@ -73,10 +76,13 @@ export default function AdminDeliveryManagement() {
         </button>
       </div>
 
-      {/* DELIVERY BOYS */}
+      {/* DELIVERY BOYS GRID */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {boys.map((boy) => (
-          <div key={boy._id} className="bg-white p-6 rounded-2xl shadow border">
+          <div
+            key={boy._id}
+            className="bg-white p-6 rounded-2xl shadow border"
+          >
             <div className="flex justify-between mb-2">
               <h3 className="font-semibold">{boy.name}</h3>
               <span className="text-xs bg-gray-200 px-2 py-1 rounded">
@@ -91,6 +97,14 @@ export default function AdminDeliveryManagement() {
             <p className="flex gap-2 text-sm">
               <MapPin size={14} /> {boy.vehicleNumber}
             </p>
+
+            {/* ✅ VIEW DETAILS BUTTON */}
+            <button
+              onClick={() => navigate(`/admin/delivery/${boy._id}`)}
+              className="mt-4 w-full bg-orange-600 text-white py-2 rounded-lg hover:bg-orange-700"
+            >
+              View Details
+            </button>
           </div>
         ))}
       </div>
@@ -109,7 +123,7 @@ export default function AdminDeliveryManagement() {
       <AnimatePresence>
         {showOtpModal && (
           <VerifyOtpModal
-            otpToken={otpToken}        // ✅ FIX
+            otpToken={otpToken}
             onClose={() => setShowOtpModal(false)}
             onVerified={fetchDeliveryBoys}
           />
@@ -158,10 +172,16 @@ function AddDeliveryBoyModal({ onClose, onAdd }) {
       ))}
 
       <div className="flex gap-3">
-        <button onClick={submit} className="flex-1 bg-black text-white py-2 rounded">
+        <button
+          onClick={submit}
+          className="flex-1 bg-black text-white py-2 rounded"
+        >
           Send OTP
         </button>
-        <button onClick={onClose} className="flex-1 bg-gray-200 py-2 rounded">
+        <button
+          onClick={onClose}
+          className="flex-1 bg-gray-200 py-2 rounded"
+        >
           Cancel
         </button>
       </div>
@@ -185,7 +205,7 @@ function VerifyOtpModal({ otpToken, onClose, onVerified }) {
 
       await axios.post(
         "http://localhost:3000/api/admin/verify-otp",
-        { otp, otpToken },   // ✅ FIX
+        { otp, otpToken },
         { withCredentials: true }
       );
 
@@ -218,7 +238,10 @@ function VerifyOtpModal({ otpToken, onClose, onVerified }) {
         >
           {loading ? "Verifying..." : "Verify"}
         </button>
-        <button onClick={onClose} className="flex-1 bg-gray-200 py-2 rounded">
+        <button
+          onClick={onClose}
+          className="flex-1 bg-gray-200 py-2 rounded"
+        >
           Cancel
         </button>
       </div>

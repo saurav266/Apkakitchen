@@ -1,24 +1,46 @@
 import Order from "../model/orderSchema.js";
-
+import { io }  from "../server.js";
 /* ===============================
    CREATE ORDER (USER)
 ================================ */
 export const createOrder = async (req, res) => {
   try {
     const {
+      customerName,
+      customerPhone,
       items,
       totalAmount,
       paymentMethod,
       deliveryAddress
     } = req.body;
 
+    if (
+      !customerName ||
+      !customerPhone ||
+      !items?.length ||
+      !totalAmount ||
+      !paymentMethod ||
+      !deliveryAddress
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing order fields"
+      });
+    }
+
     const order = await Order.create({
-      userId: req.user._id,
+      userId: req.user.id,
+      customerName,
+      customerPhone,
       items,
       totalAmount,
       paymentMethod,
-      deliveryAddress
+      deliveryAddress,
+      paymentStatus: paymentMethod === "COD" ? "pending" : "paid",
+      orderStatus: "placed"
     });
+
+    io.to("admin_all").emit("new-order", order);
 
     res.status(201).json({
       success: true,
@@ -26,13 +48,17 @@ export const createOrder = async (req, res) => {
       order
     });
   } catch (error) {
+    console.error("CREATE ORDER ERROR:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to create order",
-      error: error.message
+      message: "Failed to create order"
     });
   }
 };
+
+
+
+
 
 /* ===============================
    GET USER ORDERS

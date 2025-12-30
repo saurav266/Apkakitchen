@@ -1,53 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Search, Eye } from "lucide-react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
-const dummyOrders = [
-  {
-    id: "ORD001",
-    customer: "Ravi Kumar",
-    phone: "9876543210",
-    amount: 549,
-    status: "placed",
-    payment: "COD",
-    date: "2025-12-18",
-  },
-  {
-    id: "ORD002",
-    customer: "Anita Sharma",
-    phone: "9123456780",
-    amount: 349,
-    status: "preparing",
-    payment: "Online",
-    date: "2025-12-18",
-  },
-  {
-    id: "ORD003",
-    customer: "Mohit Verma",
-    phone: "9000011111",
-    amount: 799,
-    status: "out_for_delivery",
-    payment: "Online",
-    date: "2025-12-18",
-  },
-  {
-    id: "ORD004",
-    customer: "Priya Singh",
-    phone: "9888877777",
-    amount: 299,
-    status: "delivered",
-    payment: "COD",
-    date: "2025-12-17",
-  },
-  {
-    id: "ORD005",
-    customer: "Aman Yadav",
-    phone: "9555566666",
-    amount: 199,
-    status: "cancelled",
-    payment: "Online",
-    date: "2025-12-17",
-  },
-];
+import { socket } from "../socket";
+const API = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 const statusStyles = {
   placed: "bg-blue-100 text-blue-700",
@@ -58,27 +15,97 @@ const statusStyles = {
 };
 
 export default function AdminOrders() {
+   const navigate = useNavigate();
+  const [orders, setOrders] = useState([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
+  const [loading, setLoading] = useState(true);
 
-  const filteredOrders = dummyOrders.filter((o) => {
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+ useEffect(() => {
+  // 🔔 New order placed
+  socket.on("new-order", (order) => {
+    console.log("🔔 New order received:", order);
+    setOrders((prev) => [order, ...prev]);
+  });
+
+  // ✅ Order accepted by delivery boy
+  socket.on("order-accepted", ({ orderId }) => {
+    setOrders((prev) =>
+      prev.map((o) =>
+        o._id === orderId
+          ? { ...o, orderStatus: "out_for_delivery" }
+          : o
+      )
+    );
+  });
+
+  // ❌ Order rejected by delivery boy
+  socket.on("order-rejected", ({ orderId }) => {
+    setOrders((prev) =>
+      prev.map((o) =>
+        o._id === orderId
+          ? { ...o, orderStatus: "preparing", deliveryBoy: null }
+          : o
+      )
+    );
+  });
+
+  // 📦 Order delivered
+  socket.on("order-delivered", ({ orderId }) => {
+    setOrders((prev) =>
+      prev.map((o) =>
+        o._id === orderId
+          ? { ...o, orderStatus: "delivered" }
+          : o
+      )
+    );
+  });
+
+  return () => {
+    socket.off("new-order");
+    socket.off("order-accepted");
+    socket.off("order-rejected");
+    socket.off("order-delivered");
+  };
+}, []);
+
+
+
+  const fetchOrders = async () => {
+    try {
+      const res = await axios.get(`${API}/api/admin/all-orders`, {
+        withCredentials: true,
+      });
+      setOrders(res.data.orders);
+    } catch (err) {
+      alert("Failed to load orders");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredOrders = orders.filter((o) => {
     const matchSearch =
-      o.customer.toLowerCase().includes(search.toLowerCase()) ||
-      o.id.toLowerCase().includes(search.toLowerCase());
+      o.userId?.name?.toLowerCase().includes(search.toLowerCase()) ||
+      o._id.toLowerCase().includes(search.toLowerCase());
 
-    const matchStatus = status === "all" || o.status === status;
+    const matchStatus = status === "all" || o.orderStatus === status;
 
     return matchSearch && matchStatus;
   });
 
+  if (loading) return <p className="p-6">Loading orders...</p>;
+
   return (
     <div className="p-6">
-      {/* 🧾 Header */}
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Orders</h1>
 
         <div className="flex gap-3 flex-col sm:flex-row">
-          {/* 🔍 Search */}
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
@@ -90,7 +117,6 @@ export default function AdminOrders() {
             />
           </div>
 
-          {/* 🎯 Filter */}
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
@@ -106,10 +132,10 @@ export default function AdminOrders() {
         </div>
       </div>
 
-      {/* 📊 Table */}
+      {/* Table */}
       <div className="bg-white rounded-2xl shadow border border-orange-100 overflow-x-auto">
         <table className="min-w-full text-sm">
-          <thead className="bg-orange-50 text-gray-700">
+          <thead className="bg-orange-50">
             <tr>
               <th className="px-4 py-3 text-left">Order ID</th>
               <th className="px-4 py-3 text-left">Customer</th>
@@ -125,40 +151,49 @@ export default function AdminOrders() {
           <tbody>
             {filteredOrders.length === 0 ? (
               <tr>
-                <td
-                  colSpan="8"
-                  className="text-center py-8 text-gray-500"
-                >
-                  No orders found.
+                <td colSpan="8" className="text-center py-8 text-gray-500">
+                  No orders found
                 </td>
               </tr>
             ) : (
               filteredOrders.map((o) => (
-                <tr
-                  key={o.id}
-                  className="border-t hover:bg-orange-50/40 transition"
-                >
-                  <td className="px-4 py-3 font-medium">{o.id}</td>
-                  <td className="px-4 py-3">{o.customer}</td>
-                  <td className="px-4 py-3">{o.phone}</td>
-                  <td className="px-4 py-3 font-semibold text-orange-600">
-                    ₹{o.amount}
-                  </td>
-                  <td className="px-4 py-3">{o.payment}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-semibold ${statusStyles[o.status]}`}
-                    >
-                      {o.status.replaceAll("_", " ")}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">{o.date}</td>
-                  <td className="px-4 py-3 text-center">
-                    <button className="p-2 rounded-lg bg-orange-100 text-orange-600 hover:bg-orange-200 transition">
-                      <Eye className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
+                <tr key={o._id} className="border-t hover:bg-orange-50/40">
+                <td className="px-4 py-3 font-medium">
+                  #{o._id.slice(-6)}
+                </td>
+
+                <td className="px-4 py-3">{o.customerName}</td>
+
+                <td className="px-4 py-3">{o.customerPhone}</td>
+
+                <td className="px-4 py-3 font-semibold text-orange-600">
+                  ₹{o.totalAmount}
+                </td>
+
+                <td className="px-4 py-3">{o.paymentMethod}</td>
+
+                <td className="px-4 py-3">
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-semibold ${statusStyles[o.orderStatus]}`}
+                  >
+                    {o.orderStatus.replaceAll("_", " ")}
+                  </span>
+                </td>
+
+                <td className="px-4 py-3">
+                  {new Date(o.createdAt).toLocaleDateString()}
+                </td>
+
+                <td className="px-4 py-3 text-center">
+                  <button
+                    onClick={() => navigate(`/admin/orders/${o._id}`)}
+                    className="p-2 rounded-lg bg-orange-100 text-orange-600 hover:bg-orange-200"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                </td>
+              </tr>
+
               ))
             )}
           </tbody>

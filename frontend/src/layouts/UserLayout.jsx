@@ -1,15 +1,18 @@
-import Navbar from "../User-Components/Navbar.jsx";
+import { memo } from "react";
 import { Outlet } from "react-router-dom";
+import Navbar from "../User-Components/Navbar.jsx";
 
-export default function UserLayout() {
+const UserLayout = memo(function UserLayout() {
   return (
     <>
       <Navbar />
 
       {/* Main page content */}
-      <main className=" relative z-10">
+      <main className="relative z-10">
         <Outlet />
       </main>
     </>
   );
-}
+});
+
+export default UserLayout;

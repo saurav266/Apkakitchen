@@ -1,10 +1,13 @@
 import express from "express";
-import { resetPassword,forgotPassword,getUserProfile} from "../controller/userController.js";
+import { resetPassword,forgotPassword,getUserProfile,getMyOrders} from "../controller/userController.js";
 import { protect,authorizeRoles } from "../middleware/authMiddleware.js";
 import {addAddress,
   updateAddress,
   deleteAddress,
-  setCurrentAddress} from "../controller/userController.js";
+  setCurrentAddress,
+  getOrderById,
+  cancelOrderByUser
+} from "../controller/userController.js";
 
 const router = express.Router();
 
@@ -13,6 +16,15 @@ const router = express.Router();
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password/:token", resetPassword);
 router.get("/profile",protect, getUserProfile);
+router.get("/my-orders", protect, getMyOrders);
+router.get("/order/:id", protect, getOrderById);
+
+router.patch(
+  "/order/:id/cancel",
+  protect,
+  authorizeRoles("user"),
+  cancelOrderByUser
+);
 
 // for addressing CORS issues with cookies
 router.post("/address", protect, authorizeRoles("user"), addAddress);

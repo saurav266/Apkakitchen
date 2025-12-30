@@ -3,9 +3,21 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { MapPin, Phone, CreditCard, Banknote } from "lucide-react";
 import axios from "axios";
+import '../utils/fixLeafletIcon.js';
 
-const API = "http://localhost:3000";
+const API =import.meta.env.VITE_API_URL || "http://localhost:3000";
 
+const loadRazorpay = () => {
+  return new Promise((resolve) => {
+    if (window.Razorpay) return resolve(true);
+
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
 export default function Checkout() {
   const navigate = useNavigate();
 
@@ -39,6 +51,7 @@ export default function Checkout() {
 
   /* ================= FETCH SAVED ADDRESSES ================= */
 
+
   const fetchSavedAddresses = async () => {
     try {
       const res = await axios.get(`${API}/api/users/profile`, {
@@ -68,32 +81,65 @@ export default function Checkout() {
 
   /* ================= CURRENT LOCATION ================= */
 
-  const useCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      alert("Geolocation not supported");
-      return;
-    }
+const useCurrentLocation = () => {
+  if (!navigator.geolocation) {
+    alert("Geolocation not supported");
+    return;
+  }
 
-    navigator.geolocation.getCurrentPosition(async (pos) => {
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
       const { latitude, longitude } = pos.coords;
 
       try {
-        const res = await axios.get(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
-        );
+       const res = await axios.get(
+  "https://us1.locationiq.com/v1/reverse",
+  {
+    params: {
+      key: import.meta.env.VITE_LOCATIONIQ_KEY,
+      lat: latitude,
+      lon: longitude,
+      format: "json",
+      zoom: 18,              // MAX detail
+      addressdetails: 1,
+      namedetails: 1,
+    },
+    withCredentials: false, // IMPORTANT (avoid CORS issue)
+  }
+);
 
-        const addr = res.data.address || {};
-        setAddressLine(
-          addr.road || addr.neighbourhood || addr.suburb || ""
-        );
-        setCity(addr.city || addr.town || "");
-        setState(addr.state || "");
-        setPincode(addr.postcode || "");
-      } catch {
-        alert("Failed to auto-fill location");
+
+       const addr = res.data.address || {};
+const display = res.data.display_name || "";
+
+setAddressLine(
+  [
+    addr.house_number,
+    addr.building,
+    addr.road,
+    addr.neighbourhood || addr.suburb,
+    addr.hamlet
+  ]
+    .filter(Boolean)
+    .join(", ")
+    || display
+);
+
+setCity(addr.city || addr.town || addr.village || "");
+setState(addr.state || "");
+setPincode(addr.postcode || "");
+
+
+      } catch (err) {
+        console.error(err);
+        alert("Failed to fetch address");
       }
-    });
-  };
+    },
+    () => alert("Location permission denied")
+  );
+};
+
+
 
   const subtotal = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
   const delivery = subtotal > 0 ? 40 : 0;
@@ -101,33 +147,166 @@ export default function Checkout() {
 
   /* ================= PLACE ORDER ================= */
 
-  const placeOrder = async () => {
-    if (!name || !phone || !addressLine || !city || !state || !pincode) {
-      alert("Please fill complete address");
-      return;
-    }
+const placeOrder = async () => {
+  if (!name || !phone || !addressLine || !city || !state || !pincode) {
+    alert("Please fill complete address");
+    return;
+  }
 
+  /* ================= COD FLOW ================= */
+  if (payment === "cod") {
     setLoading(true);
     try {
-      console.log("Order payload:", {
-        name,
-        phone,
-        addressLine,
-        city,
-        state,
-        pincode,
-        payment,
-        items: cart,
-        total,
-      });
+      await axios.post(
+        `${API}/api/orders/create`,
+        {
+          customerName: name,
+          customerPhone: phone,
+          items: cart.map(i => ({
+            productId: i._id,
+            name: i.name,
+            quantity: i.qty,
+            price: i.price
+          })),
+          totalAmount: total,
+          paymentMethod: "COD",
+          deliveryAddress: `${addressLine}, ${city}, ${state} - ${pincode}`
+        },
+        { withCredentials: true }
+      );
 
-      alert("Order request sent (connect backend next)");
-    } catch {
-      alert("Failed to place order");
+      localStorage.removeItem("cart");
+      navigate("/orders/success");
+    } catch (err) {
+      alert(err.response?.data?.message || "Order failed");
     } finally {
       setLoading(false);
     }
-  };
+    return;
+  }
+
+  /* ================= ONLINE PAYMENT FLOW ================= */
+  setLoading(true);
+
+  try {
+    const razorpayLoaded = await loadRazorpay();
+    if (!razorpayLoaded) {
+      alert("Razorpay SDK failed to load");
+      setLoading(false);
+      return;
+    }
+
+    /* 1️⃣ Create payment token */
+    const { data } = await axios.post(
+      `${API}/api/payment/create`,
+      {
+        customerName: name,
+        customerPhone: phone,
+        items: cart.map(i => ({
+          productId: i._id,
+          name: i.name,
+          quantity: i.qty,
+          price: i.price
+        })),
+        totalAmount: total,
+        deliveryAddress: `${addressLine}, ${city}, ${state} - ${pincode}`
+      },
+      { withCredentials: true }
+    );
+
+    const { razorpayOrder, paymentToken } = data;
+
+    /* 2️⃣ Open Razorpay */
+    const options = {
+      key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+      amount: razorpayOrder.amount,
+      currency: "INR",
+      name: "APKAKitchen",
+      description: "Food Order Payment",
+      order_id: razorpayOrder.id,
+
+      handler: async function (response) {
+        try {
+          /* 3️⃣ Verify payment */
+          await axios.post(
+            `${API}/api/payment/verify`,
+            {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              paymentToken
+            },
+            { withCredentials: true }
+          );
+
+          localStorage.removeItem("cart");
+          navigate("/orders/success");
+
+        } catch {
+          alert("Payment verification failed. Amount will be refunded.");
+        }
+      },
+
+      prefill: {
+        name,
+        contact: phone
+      },
+
+      theme: {
+        color: "#f97316"
+      },
+
+      modal: {
+        ondismiss: () => {
+          alert("Payment cancelled");
+        }
+      }
+    };
+
+    const rzp = new window.Razorpay({
+  ...options,
+  handler: async function (response) {
+    try {
+      await axios.post(
+        `${API}/api/payment/verify`,
+        {
+          razorpay_order_id: response.razorpay_order_id,
+          razorpay_payment_id: response.razorpay_payment_id,
+          razorpay_signature: response.razorpay_signature,
+          paymentToken
+        },
+        { withCredentials: true }
+      );
+
+      localStorage.removeItem("cart");
+      navigate("/orders/success");
+
+    } catch {
+      alert("Payment verification failed. Amount will be refunded.");
+    } finally {
+      setLoading(false); // ✅ CORRECT PLACE
+    }
+  },
+  modal: {
+    ondismiss: () => {
+      setLoading(false); // ✅ when user closes payment
+      alert("Payment cancelled");
+    }
+  }
+});
+
+rzp.open();
+
+
+  } catch (err) {
+    alert("Payment failed");
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+
 
   return (
     <section className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-red-50 pt-28 pb-16">

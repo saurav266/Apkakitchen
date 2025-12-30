@@ -1,12 +1,16 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
+
+const API = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 export default function UserOrdersPage() {
   const [orders, setOrders] = useState([]);
   const [expanded, setExpanded] = useState(null);
   const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchOrders();
@@ -15,7 +19,7 @@ export default function UserOrdersPage() {
   const fetchOrders = async () => {
     try {
       const { data } = await axios.get(
-        "/api/orders/my-orders",
+        `${API}/api/users/my-orders`,
         { withCredentials: true }
       );
       if (data.success) setOrders(data.orders);
@@ -26,11 +30,14 @@ export default function UserOrdersPage() {
     }
   };
 
+  /* ================= FILTER ================= */
   const filteredOrders = orders.filter(order => {
     if (filter === "active")
-      return order.orderStatus !== "delivered";
+      return !["delivered", "cancelled"].includes(order.orderStatus);
+
     if (filter === "delivered")
       return order.orderStatus === "delivered";
+
     return true;
   });
 
@@ -57,11 +64,11 @@ export default function UserOrdersPage() {
         </div>
       </div>
 
-      {/* ================= ORDERS ================= */}
       {filteredOrders.length === 0 && (
         <p className="text-gray-500 text-center">No orders found.</p>
       )}
 
+      {/* ================= ORDERS ================= */}
       {filteredOrders.map(order => (
         <motion.div
           key={order._id}
@@ -105,6 +112,18 @@ export default function UserOrdersPage() {
                 {/* TIMELINE */}
                 <OrderTimeline status={order.orderStatus} />
 
+                {/* CANCEL INFO */}
+                {order.orderStatus === "cancelled" && (
+                  <div className="bg-red-50 border border-red-200 p-3 rounded-xl text-sm text-red-700">
+                    ❌ Cancelled by {order.cancelledBy}
+                    {order.cancelReason && (
+                      <p className="mt-1 text-xs">
+                        Reason: {order.cancelReason}
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {/* ITEMS */}
                 <div className="space-y-2">
                   {order.items.map((item, i) => (
@@ -122,12 +141,22 @@ export default function UserOrdersPage() {
                 </div>
 
                 {/* ACTIONS */}
-                <div className="flex gap-3 pt-2">
+                <div className="flex gap-3 pt-2 flex-wrap">
+                  <ActionBtn
+                    text="View Details"
+                    onClick={() => navigate(`/orders/${order._id}`)}
+                    variant="outline"
+                  />
+
+                  {!["delivered", "cancelled"].includes(order.orderStatus) && (
+                    <ActionBtn
+                      text="Track Order"
+                      onClick={() => navigate(`/orders/${order._id}`)}
+                    />
+                  )}
+
                   {order.orderStatus === "delivered" && (
                     <ActionBtn text="Reorder" />
-                  )}
-                  {order.orderStatus !== "delivered" && (
-                    <ActionBtn text="Track Order" />
                   )}
                 </div>
               </motion.div>
@@ -141,18 +170,24 @@ export default function UserOrdersPage() {
 
 /* ================= COMPONENTS ================= */
 
-function FilterBtn({ label, active, onClick }) {
+function ActionBtn({ text, onClick, variant = "solid" }) {
+  const styles =
+    variant === "outline"
+      ? "border border-red-600 text-red-600 bg-white hover:bg-red-50"
+      : "bg-red-600 text-white hover:bg-red-700";
+
   return (
-    <button
-      onClick={onClick}
-      className={`px-4 py-1.5 rounded-full text-sm font-semibold transition ${
-        active
-          ? "bg-yellow-300 text-red-900 shadow"
-          : "bg-white text-gray-600 border"
-      }`}
+    <motion.button
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick?.();
+      }}
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+      className={`px-5 py-2 rounded-full text-sm font-semibold shadow transition ${styles}`}
     >
-      {label}
-    </button>
+      {text}
+    </motion.button>
   );
 }
 
@@ -160,6 +195,7 @@ function StatusBadge({ status }) {
   const map = {
     placed: "bg-yellow-100 text-yellow-800",
     preparing: "bg-orange-100 text-orange-700",
+    assigned: "bg-blue-100 text-blue-700",
     out_for_delivery: "bg-purple-100 text-purple-700",
     delivered: "bg-green-100 text-green-700",
     cancelled: "bg-red-100 text-red-700"
@@ -173,12 +209,30 @@ function StatusBadge({ status }) {
 }
 
 function OrderTimeline({ status }) {
-  const steps = ["placed", "preparing", "out_for_delivery", "delivered"];
+  const steps = [
+    "placed",
+    "preparing",
+    "assigned",
+    "out_for_delivery",
+    "delivered"
+  ];
+
+  if (status === "cancelled") {
+    return (
+      <div className="bg-red-50 border border-red-200 p-3 rounded-xl text-center">
+        <p className="text-sm font-semibold text-red-600">
+          ❌ Order Cancelled
+        </p>
+      </div>
+    );
+  }
+
+  const currentIndex = steps.indexOf(status);
 
   return (
     <div className="flex justify-between items-center">
-      {steps.map(step => {
-        const active = steps.indexOf(step) <= steps.indexOf(status);
+      {steps.map((step, index) => {
+        const active = index <= currentIndex;
         return (
           <div key={step} className="flex-1 text-center">
             <div
@@ -186,7 +240,11 @@ function OrderTimeline({ status }) {
                 active ? "bg-yellow-400" : "bg-gray-300"
               }`}
             />
-            <p className="text-xs mt-1 capitalize text-gray-600">
+            <p
+              className={`text-xs mt-1 capitalize ${
+                active ? "text-gray-800 font-medium" : "text-gray-500"
+              }`}
+            >
               {step.replaceAll("_", " ")}
             </p>
           </div>
@@ -196,19 +254,22 @@ function OrderTimeline({ status }) {
   );
 }
 
-function ActionBtn({ text }) {
+function FilterBtn({ label, active, onClick }) {
   return (
-    <motion.button
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
-      className="px-5 py-2 rounded-full bg-red-600 text-white text-sm font-semibold shadow hover:bg-red-700 transition"
+    <button
+      onClick={onClick}
+      className={`px-4 py-1.5 rounded-full text-sm font-semibold transition ${
+        active
+          ? "bg-yellow-300 text-red-900 shadow"
+          : "bg-white text-gray-600 border hover:bg-orange-50"
+      }`}
     >
-      {text}
-    </motion.button>
+      {label}
+    </button>
   );
 }
 
-/* ================= LOADING SKELETON ================= */
+/* ================= LOADING ================= */
 
 function Skeleton() {
   return (

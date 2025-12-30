@@ -1,77 +1,122 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  User,
   Phone,
   Mail,
   Bike,
   Star,
-  IndianRupee,
-  Package,
   Edit,
   LogOut,
   Moon,
   Sun,
-  Clock,
-  Lock,
+  Lock
 } from "lucide-react";
+import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../context/Themecontext.jsx";
+
+const API = "http://localhost:3000";
+
 export default function DeliveryProfile() {
   const navigate = useNavigate();
-
   const { dark, setDark } = useTheme();
 
-  const [profile, setProfile] = useState({
-    name: "Amit Kumar",
-    phone: "+91 98765 43210",
-    email: "amit.delivery@apnakitchen.com",
-    vehicle: "Bike - JH01 AB 1234",
-    rating: 4.7,
-    orders: 128,
-    earnings: 8650,
-  });
+  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState(null);
 
   const [showEdit, setShowEdit] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [showSchedule, setShowSchedule] = useState(false);
 
-  const [form, setForm] = useState(profile);
+  const [form, setForm] = useState({
+    name: "",
+    phone: "",
+    email: "",
+    vehicleNumber: ""
+  });
 
   const [passwordForm, setPasswordForm] = useState({
     current: "",
     newPass: "",
-    confirm: "",
+    confirm: ""
   });
 
-  const [schedule, setSchedule] = useState({
-    start: "09:00",
-    end: "21:00",
-  });
+  /* ================= INPUT CLASS (DARK SAFE) ================= */
+  const inputClass = `
+    w-full rounded-lg px-3 py-2 text-sm outline-none transition
+    border
+    ${dark
+      ? "bg-slate-700 border-slate-600 text-white placeholder-gray-400 focus:ring-2 focus:ring-orange-500"
+      : "bg-white border-gray-300 text-gray-800 focus:ring-2 focus:ring-orange-500"}
+  `;
 
-  const saveProfile = () => {
-    setProfile(form);
+  /* ================= FETCH PROFILE ================= */
+  useEffect(() => {
+    axios
+      .get(`${API}/api/delivery/profile`, { withCredentials: true })
+      .then(res => {
+        const p = res.data.profile;
+
+        setProfile(p);
+        setForm({
+          name: p.name || "",
+          phone: p.phone || "",
+          email: p.email || "",
+          vehicleNumber: p.vehicleNumber || ""
+        });
+
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  /* ================= SAVE PROFILE ================= */
+  const saveProfile = async () => {
+    await axios.put(
+      `${API}/api/delivery/profile`,
+      form,
+      { withCredentials: true }
+    );
+
+    setProfile({ ...profile, ...form });
     setShowEdit(false);
   };
 
-  const changePassword = () => {
+  /* ================= CHANGE PASSWORD ================= */
+  const changePassword = async () => {
     if (passwordForm.newPass !== passwordForm.confirm) {
       alert("Passwords do not match");
       return;
     }
-    alert("Password changed (API later)");
+
+    await axios.put(
+      `${API}/api/delivery/change-password`,
+      passwordForm,
+      { withCredentials: true }
+    );
+
+    alert("Password updated");
+    setPasswordForm({ current: "", newPass: "", confirm: "" });
     setShowPassword(false);
   };
 
+  /* ================= LOGOUT ================= */
   const logout = () => {
-    localStorage.removeItem("user");
+    localStorage.clear();
     window.dispatchEvent(new Event("authChanged"));
     navigate("/login");
   };
 
+  if (loading || !profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        Loading profile...
+      </div>
+    );
+  }
+
   return (
     <section
-      className={`min-h-screen pt-6 pb-24 px-4 transition ${
+      className={`min-h-screen pt-6 pb-24 px-4 ${
         dark
           ? "bg-slate-900 text-white"
           : "bg-gradient-to-br from-orange-50 via-amber-50 to-red-50"
@@ -79,83 +124,69 @@ export default function DeliveryProfile() {
     >
       <div className="max-w-md mx-auto space-y-6">
 
-        {/* 🌙 Dark Toggle */}
+        {/* 🌙 DARK MODE */}
         <div className="flex justify-end">
           <button
             onClick={() => setDark(!dark)}
-            className="flex items-center gap-2 px-4 py-2 rounded-full bg-orange-100 text-orange-700 font-medium"
+            className="flex items-center gap-2 px-4 py-2 rounded-full
+                       bg-orange-100 text-orange-700 font-medium"
           >
             {dark ? <Sun size={18} /> : <Moon size={18} />}
             {dark ? "Light" : "Dark"}
           </button>
         </div>
 
-        {/* 👤 Header */}
-        <div
-          className={`rounded-3xl shadow-2xl p-6 text-center ${
-            dark ? "bg-slate-800" : "bg-white/90 backdrop-blur"
-          }`}
-        >
-          <div className="relative w-24 h-24 mx-auto mb-4">
-            <div className="w-full h-full rounded-full bg-gradient-to-r from-orange-500 to-red-500 flex items-center justify-center text-white text-3xl font-bold shadow-lg">
-              {profile.name.charAt(0)}
-            </div>
-            <span className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-green-500 border-2 border-white" />
+        {/* 👤 PROFILE CARD */}
+        <div className={`rounded-3xl shadow-xl p-6 text-center ${
+          dark ? "bg-slate-800" : "bg-white/90"
+        }`}>
+          <div className="w-24 h-24 mx-auto mb-3 rounded-full
+                          bg-orange-500 flex items-center justify-center
+                          text-white text-3xl font-bold">
+            {profile.name.charAt(0)}
           </div>
 
           <h2 className="text-xl font-bold">{profile.name}</h2>
           <p className="text-sm text-gray-400">Delivery Partner</p>
 
-          <div className="flex justify-center gap-2 mt-2 text-orange-600 font-semibold">
+          <div className="flex justify-center gap-1 mt-2 text-orange-600 font-semibold">
             <Star className="w-4 h-4 fill-orange-500" />
-            {profile.rating}
+            {profile.rating || 4.5}
           </div>
 
           <button
             onClick={() => setShowEdit(true)}
-            className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-100 text-orange-700 font-medium"
+            className="mt-4 inline-flex items-center gap-2
+                       px-4 py-2 rounded-full
+                       bg-orange-100 text-orange-700"
           >
             <Edit size={16} /> Edit Profile
           </button>
         </div>
 
-        {/* 📊 Stats */}
-        <div className="grid grid-cols-2 gap-4">
-          <StatCard dark={dark} icon={Package} label="Orders" value={profile.orders} />
-          <StatCard dark={dark} icon={IndianRupee} label="Earnings" value={`₹${profile.earnings}`} />
-        </div>
-
-        {/* 📄 Info */}
-        <div
-          className={`rounded-3xl shadow-xl p-6 space-y-4 ${
-            dark ? "bg-slate-800" : "bg-white/90"
-          }`}
-        >
+        {/* 📄 INFO */}
+        <div className={`rounded-3xl p-6 shadow space-y-4 ${
+          dark ? "bg-slate-800" : "bg-white/90"
+        }`}>
           <InfoRow icon={Phone} label="Phone" value={profile.phone} />
           <InfoRow icon={Mail} label="Email" value={profile.email} />
-          <InfoRow icon={Bike} label="Vehicle" value={profile.vehicle} />
+          <InfoRow icon={Bike} label="Vehicle" value={profile.vehicleNumber} />
         </div>
 
-        {/* 🕒 Schedule */}
-        <button
-          onClick={() => setShowSchedule(true)}
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-orange-500 text-white font-semibold shadow"
-        >
-          <Clock size={18} /> Availability Schedule
-        </button>
-
-        {/* 🔐 Change Password */}
+        {/* 🔐 PASSWORD */}
         <button
           onClick={() => setShowPassword(true)}
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-amber-500 text-white font-semibold shadow"
+          className="w-full flex items-center justify-center gap-2
+                     py-3 rounded-xl bg-amber-500 text-white font-semibold"
         >
           <Lock size={18} /> Change Password
         </button>
 
-        {/* 🚪 Logout */}
+        {/* 🚪 LOGOUT */}
         <button
           onClick={logout}
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-red-500 text-white font-semibold shadow-lg"
+          className="w-full flex items-center justify-center gap-2
+                     py-3 rounded-xl bg-red-500 text-white font-semibold"
         >
           <LogOut size={18} /> Logout
         </button>
@@ -163,92 +194,110 @@ export default function DeliveryProfile() {
 
       {/* ================= MODALS ================= */}
       <AnimatePresence>
-        {showSchedule && (
-          <Modal title="Availability Schedule" onClose={() => setShowSchedule(false)}>
-            <div className="space-y-4">
-              <input
-                type="time"
-                value={schedule.start}
-                onChange={(e) => setSchedule({ ...schedule, start: e.target.value })}
-                className="w-full border p-2 rounded-lg"
-              />
-              <input
-                type="time"
-                value={schedule.end}
-                onChange={(e) => setSchedule({ ...schedule, end: e.target.value })}
-                className="w-full border p-2 rounded-lg"
-              />
-              <button
-                onClick={() => setShowSchedule(false)}
-                className="w-full bg-orange-600 text-white py-2 rounded-lg"
-              >
-                Save Schedule
-              </button>
-            </div>
+
+        {/* EDIT PROFILE */}
+        {showEdit && (
+          <Modal
+            title="Edit Profile"
+            dark={dark}
+            onClose={() => setShowEdit(false)}
+          >
+            <input
+              className={inputClass}
+              value={form.name}
+              onChange={e => setForm({ ...form, name: e.target.value })}
+              placeholder="Name"
+            />
+
+            <input
+              className={inputClass}
+              value={form.phone}
+              onChange={e => setForm({ ...form, phone: e.target.value })}
+              placeholder="Phone"
+            />
+
+            <input
+              className={inputClass}
+              value={form.email}
+              onChange={e => setForm({ ...form, email: e.target.value })}
+              placeholder="Email"
+            />
+
+            <input
+              className={inputClass}
+              value={form.vehicleNumber}
+              onChange={e =>
+                setForm({ ...form, vehicleNumber: e.target.value })
+              }
+              placeholder="Vehicle Number"
+            />
+
+            <button
+              onClick={saveProfile}
+              className="w-full bg-orange-600 hover:bg-orange-700
+                         text-white py-2 rounded-lg font-semibold transition"
+            >
+              Save Changes
+            </button>
           </Modal>
         )}
 
+        {/* CHANGE PASSWORD */}
         {showPassword && (
-          <Modal title="Change Password" onClose={() => setShowPassword(false)}>
-            <div className="space-y-3">
-              <input
-                type="password"
-                placeholder="Current password"
-                className="w-full border p-2 rounded-lg"
-                onChange={(e) =>
-                  setPasswordForm({ ...passwordForm, current: e.target.value })
-                }
-              />
-              <input
-                type="password"
-                placeholder="New password"
-                className="w-full border p-2 rounded-lg"
-                onChange={(e) =>
-                  setPasswordForm({ ...passwordForm, newPass: e.target.value })
-                }
-              />
-              <input
-                type="password"
-                placeholder="Confirm new password"
-                className="w-full border p-2 rounded-lg"
-                onChange={(e) =>
-                  setPasswordForm({ ...passwordForm, confirm: e.target.value })
-                }
-              />
-              <button
-                onClick={changePassword}
-                className="w-full bg-amber-600 text-white py-2 rounded-lg"
-              >
-                Update Password
-              </button>
-            </div>
+          <Modal
+            title="Change Password"
+            dark={dark}
+            onClose={() => setShowPassword(false)}
+          >
+            <input
+              type="password"
+              className={inputClass}
+              placeholder="Current Password"
+              onChange={e =>
+                setPasswordForm({ ...passwordForm, current: e.target.value })
+              }
+            />
+
+            <input
+              type="password"
+              className={inputClass}
+              placeholder="New Password"
+              onChange={e =>
+                setPasswordForm({ ...passwordForm, newPass: e.target.value })
+              }
+            />
+
+            <input
+              type="password"
+              className={inputClass}
+              placeholder="Confirm Password"
+              onChange={e =>
+                setPasswordForm({ ...passwordForm, confirm: e.target.value })
+              }
+            />
+
+            <button
+              onClick={changePassword}
+              className="w-full bg-amber-600 hover:bg-amber-700
+                         text-white py-2 rounded-lg font-semibold transition"
+            >
+              Update Password
+            </button>
           </Modal>
         )}
+
       </AnimatePresence>
     </section>
   );
 }
 
-/* ===== Helpers ===== */
-
-function StatCard({ icon: Icon, label, value, dark }) {
-  return (
-    <div className={`rounded-2xl shadow-lg p-4 flex items-center gap-3 ${dark ? "bg-slate-800" : "bg-white/90"}`}>
-      <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center">
-        <Icon size={20} />
-      </div>
-      <div>
-        <p className="text-xs text-gray-400">{label}</p>
-        <p className="font-bold">{value}</p>
-      </div>
-    </div>
-  );
-}
+/* ================= HELPERS ================= */
 
 function InfoRow({ icon: Icon, label, value }) {
   return (
     <div className="flex items-center gap-3">
-      <div className="w-9 h-9 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center">
+      <div className="w-9 h-9 rounded-lg bg-orange-100
+                      text-orange-600 flex items-center justify-center">
         <Icon size={18} />
       </div>
       <div>
@@ -259,10 +308,10 @@ function InfoRow({ icon: Icon, label, value }) {
   );
 }
 
-function Modal({ title, children, onClose }) {
+function Modal({ title, children, onClose, dark }) {
   return (
     <motion.div
-      className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -271,15 +320,25 @@ function Modal({ title, children, onClose }) {
         initial={{ scale: 0.9 }}
         animate={{ scale: 1 }}
         exit={{ scale: 0.9 }}
-        className="bg-white rounded-2xl p-6 w-full max-w-sm"
+        className={`rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-xl
+          ${dark ? "bg-slate-800 text-white" : "bg-white text-gray-800"}
+        `}
       >
-        <h3 className="text-xl font-semibold mb-4 text-orange-600">
+        <h3 className="text-xl font-semibold text-orange-500">
           {title}
         </h3>
+
         {children}
+
         <button
           onClick={onClose}
-          className="mt-4 w-full border py-2 rounded-lg"
+          className={`w-full py-2 rounded-lg border transition
+            ${
+              dark
+                ? "border-slate-600 text-gray-300 hover:bg-slate-700"
+                : "border-gray-300 text-gray-700 hover:bg-gray-100"
+            }
+          `}
         >
           Close
         </button>

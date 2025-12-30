@@ -3,7 +3,14 @@ import bcrypt from "bcrypt";
 import Admin from "../model/adminSchema.js";
 import 'dotenv/config';
 import Order from "../model/orderSchema.js";
+import { autoRefund } from "../utils/autoRefund.js";
 import jwt from "jsonwebtoken";
+import User from "../model/userSchema.js";
+import DeliveryBoy from "../model/deliveryBoySchema.js";
+import { io }  from "../server.js";
+import crypto from "crypto";
+import { sendAssignDeliveryBoyEmail } from "../services/emailService.js";
+
 const DATABASE_URL = "mongodb://127.0.0.1:27017/Apkakitchen"
 // const createAdmin = async () => {
 //   try {
@@ -54,7 +61,7 @@ export const loginAdmin = async (req, res) => {
     if (!admin) {
       return res.status(401).json({
         success: false,
-        message: "Invalid email or password",
+        message: "Invalid email or password for admin",
       });
     }
 
@@ -62,7 +69,7 @@ export const loginAdmin = async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        message: "Invalid email or password",
+        message: "Invalid email or password for admin",
       });
     }
 
@@ -129,3 +136,777 @@ export const getTodayOrders = async (req, res) => {
     });
   }
 };
+
+
+export const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.aggregate([
+      {
+        $lookup: {
+          from: "orders",
+          localField: "_id",
+          foreignField: "userId",
+          as: "orders"
+        }
+      },
+      {
+        $addFields: {
+          ordersCount: { $size: "$orders" },
+          totalSpent: { $sum: "$orders.totalAmount" }
+        }
+      },
+      {
+        $project: {
+          password: 0,
+          forgetPasswordToken: 0,
+          forgetPasswordExpiry: 0,
+          orders: 0
+        }
+      },
+      { $sort: { createdAt: -1 } }
+    ]);
+
+    res.json({ success: true, users });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch users"
+    });
+  }
+};
+
+/**
+ * BLOCK / UNBLOCK USER
+ */
+export const toggleUserStatus = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user)
+      return res.status(404).json({ message: "User not found" });
+
+    user.isActive = !user.isActive;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: "User status updated"
+    });
+  } catch {
+    res.status(500).json({ message: "Failed to update user" });
+  }
+};
+
+/**
+ * DELETE USER
+ */
+export const deleteUser = async (req, res) => {
+  try {
+    await User.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: "User deleted" });
+  } catch {
+    res.status(500).json({ message: "Delete failed" });
+  }
+};
+
+export const getUserFullDetails = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id)
+      .select("-password -forgetPasswordToken -forgetPasswordExpiry")
+      .lean();
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    const orders = await Order.find({ userId: user._id })
+      .sort({ createdAt: -1 });
+
+    const totalSpent = orders.reduce(
+      (sum, o) => sum + o.totalAmount,
+      0
+    );
+
+    res.json({
+      success: true,
+      user: {
+        ...user,
+        orders,
+        ordersCount: orders.length,
+        totalSpent
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch user details"
+    });
+  }
+};
+
+
+// for delivery boys
+
+
+export const getDeliveryBoy= async (req, res) => {
+  try {
+    const deliveryBoyId = req.user.id;
+    const deliveryBoy = await DeliveryBoy.findById(deliveryBoyId).select("-password");
+
+    if (!deliveryBoy) {
+      return res.status(404).json({
+        success: false,
+        message: "Deliveryboy not found"
+      });
+    } 
+    return res.status(200).json({
+      success: true,
+      deliveryBoy
+    });
+  } catch (error) {
+    console.error("Get Delivery Boy Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while fetching delivery boy details"
+    });
+  } 
+};
+
+export const allDeliveryBoys= async (req, res) => {
+  try {
+    const deliveryBoys = await DeliveryBoy.find().select("-password");
+
+    return res.status(200).json({
+      success: true,
+      deliveryBoys
+    });
+  } catch (error) {
+    console.error("Get All Delivery Boys Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while fetching delivery boys"
+    });
+  }
+};
+
+
+export const getDeliveryBoyById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { filter = "day" } = req.query;
+
+    /* ================= DATE RANGE ================= */
+    let startDate = new Date();
+    let endDate = new Date();
+
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(23, 59, 59, 999);
+
+    if (filter === "week") {
+      startDate.setDate(startDate.getDate() - 6);
+    }
+
+    if (filter === "month") {
+      startDate = new Date(
+        startDate.getFullYear(),
+        startDate.getMonth(),
+        1,
+        0, 0, 0, 0
+      );
+    }
+
+    /* ================= DELIVERY BOY ================= */
+    const deliveryBoy = await DeliveryBoy.findById(id)
+      .select("-password -aadhaarNumber")
+      .lean();
+
+    if (!deliveryBoy) {
+      return res.status(404).json({
+        success: false,
+        message: "Delivery boy not found"
+      });
+    }
+
+    /* ================= ORDERS (FOR DISPLAY ONLY) ================= */
+    const orders = await Order.find({
+      deliveryBoy: id,
+      orderStatus: "delivered",
+      createdAt: { $gte: startDate, $lte: endDate }
+    })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    /* ================= ✅ PENDING COD (SOURCE OF TRUTH) ================= */
+    const totalCODCollected = deliveryBoy.pendingCOD || 0;
+
+    return res.status(200).json({
+      success: true,
+      deliveryBoy: {
+        ...deliveryBoy,
+        totalOrders: orders.length,
+        totalCODCollected
+      },
+      orders
+    });
+
+  } catch (error) {
+    console.error("Get Delivery Boy Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
+  }
+};
+
+
+export const settleDeliveryBoyCOD = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deliveryBoy = await DeliveryBoy.findById(id);
+
+    if (!deliveryBoy) {
+      return res.status(404).json({
+        success: false,
+        message: "Delivery boy not found"
+      });
+    }
+
+    if (deliveryBoy.pendingCOD <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No pending COD to settle"
+      });
+    }
+
+    const settledAmount = deliveryBoy.pendingCOD;
+
+    // ✅ RESET PENDING COD
+    deliveryBoy.pendingCOD = 0;
+    deliveryBoy.lastSettlementAmount = settledAmount;
+    deliveryBoy.lastSettlementDate = new Date();
+
+    await deliveryBoy.save();
+
+    return res.status(200).json({
+      success: true,
+      settledAmount
+    });
+
+  } catch (error) {
+    console.error("Settlement Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Settlement failed"
+    });
+  }
+};
+ 
+
+
+
+
+export const editDeliveryBoyProfile = async (req, res) => {
+  try {
+    const deliveryBoyId = req.user.id;
+    const { name, phone, address } = req.body;
+
+    const deliveryBoy = await DeliveryBoy.findById(deliveryBoyId);
+    if (!deliveryBoy) {
+      return res.status(404).json({
+        success: false, 
+        message: "Delivery boy not found"
+      });
+    }
+
+    deliveryBoy.name = name || deliveryBoy.name;
+    deliveryBoy.phone = phone || deliveryBoy.phone;
+    deliveryBoy.address = address || deliveryBoy.address;
+
+    await deliveryBoy.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      deliveryBoy
+    });
+
+  } catch (error) {
+    console.error("Edit Delivery Boy Profile Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while updating profile"
+    });
+  }
+};
+
+export const updateDeliveryBoy = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const {
+      name,
+      phone,
+      vehicleNumber,
+      status,
+      isActive,
+      currentAddress,
+      permanentAddress
+    } = req.body;
+
+    const deliveryBoy = await DeliveryBoy.findById(id);
+
+    if (!deliveryBoy) {
+      return res.status(404).json({
+        success: false,
+        message: "Delivery boy not found"
+      });
+    }
+
+    /* ================= BASIC FIELDS ================= */
+    if (name) deliveryBoy.name = name;
+    if (phone) deliveryBoy.phone = phone;
+    if (vehicleNumber) deliveryBoy.vehicleNumber = vehicleNumber;
+
+    /* ================= STATUS ================= */
+    if (status) {
+      const allowed = ["available", "busy", "offline"];
+      if (!allowed.includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid status"
+        });
+      }
+      deliveryBoy.status = status;
+    }
+
+    if (typeof isActive === "boolean") {
+      deliveryBoy.isActive = isActive;
+    }
+
+    /* ================= ADDRESSES ================= */
+    if (currentAddress) {
+      deliveryBoy.currentAddress = currentAddress;
+    }
+
+    if (permanentAddress) {
+      deliveryBoy.permanentAddress = permanentAddress;
+    }
+
+    await deliveryBoy.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Delivery boy updated successfully",
+      deliveryBoy
+    });
+
+  } catch (error) {
+    console.error("Update Delivery Boy Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
+  }
+};
+
+export const deleteDeliveryBoy = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deliveryBoy = await DeliveryBoy.findById(id);
+
+    if (!deliveryBoy) {
+      return res.status(404).json({
+        success: false,
+        message: "Delivery boy not found"
+      });
+    }
+
+    await deliveryBoy.deleteOne();
+
+    return res.status(200).json({
+      success: true,
+      message: "Delivery boy deleted successfully"
+    });
+
+  } catch (error) {
+    console.error("Delete Delivery Boy Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while deleting delivery boy"
+    });
+  }
+};
+
+// for order
+// fecth orders
+export const getOrdersForDeliveryBoy = async (req, res) => {
+  try {
+    const deliveryBoyId = req.user.id;
+
+    const orders = await Order.find({ deliveryBoyId })
+      .populate("userId", "name phone")
+      .sort({ createdAt: -1 });
+
+    res.json({ success: true, orders });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch orders"
+    });
+  }
+}
+
+export const getAllOrders = async (req, res) => {
+  try {
+    const orders = await Order.find()
+      .populate({
+        path: "userId",
+        select: "name +phone" // 👈 FORCE phone
+      })
+      .populate({
+        path: "deliveryBoy",
+        select: "name phone status vehicleNumber"
+      })
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      orders
+    });
+  } catch (error) {
+    console.error("getAllOrders error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch orders"
+    });
+  }
+};
+
+
+export const getOrderById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // ✅ CRITICAL: Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid order ID"
+      });
+    }
+
+    const order = await Order.findById(id)
+      .populate("userId", "name phone address")
+      .populate("deliveryBoy", "name phone vehicleNumber status");
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
+    }
+
+    return res.json({
+      success: true,
+      order
+    });
+
+  } catch (error) {
+    console.error("GET ORDER BY ID ERROR:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch order"
+    });
+  }
+};
+export const assignDeliveryBoy = async (req, res) => {
+  try {
+    const { id } = req.params;          // order id
+    const { deliveryBoy } = req.body;   // delivery boy id
+
+    /* ================= FIND ORDER ================= */
+    const order = await Order.findById(id);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
+    }
+
+    /* ================= ASSIGN ================= */
+    order.deliveryBoy = deliveryBoy;
+    order.orderStatus = "assigned";
+    await order.save();
+
+    /* ================= DELIVERY BOY ================= */
+    const boy = await DeliveryBoy.findByIdAndUpdate(
+      deliveryBoy,
+      { status: "available" },
+      { new: true }
+    );
+
+    if (!boy) {
+      return res.status(404).json({
+        success: false,
+        message: "Delivery boy not found"
+      });
+    }
+
+    /* ================= SOCKET ================= */
+    io.to(`delivery_${deliveryBoy}`).emit("order-assigned", order);
+
+    /* ================= EMAIL ================= */
+    try {
+      await sendAssignDeliveryBoyEmail({
+        email: boy.email,
+        deliveryBoyName: boy.name,
+        orderId: order._id,
+        pickupAddress: "Restaurant pickup (check app)", // since not in schema
+        dropAddress: order.deliveryAddress,
+        customerName: order.customerName,
+        customerPhone: order.customerPhone,
+        expectedEarnings: order.totalAmount
+      });
+    } catch (mailErr) {
+      console.error("📧 Email failed:", mailErr.message);
+      // Do NOT fail assignment if email fails
+    }
+
+    /* ================= RESPONSE ================= */
+    res.json({
+      success: true,
+      message: "Delivery boy assigned successfully",
+      order
+    });
+
+  } catch (error) {
+    console.error("❌ ASSIGN DELIVERY ERROR:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
+
+
+
+export const getDeliveryBoys = async (req, res) => {
+  try {
+    const deliveryBoys = await DeliveryBoy.find({
+      role: "delivery",
+      isActive: true,
+      status: "available"
+    }).select("name phone status vehicleNumber");
+
+    res.json({
+      success: true,
+      deliveryBoys
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch delivery boys"
+    });
+  }
+};
+
+export const updateOrderStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+
+    const order = await Order.findById(req.params.id).populate("deliveryBoy");
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
+    }
+
+    /* ================= UPDATE STATUS ================= */
+    order.orderStatus = status;
+    await order.save();
+
+    /* ================= FREE DELIVERY BOY ================= */
+    if (
+      ["delivered", "cancelled"].includes(status) &&
+      order.deliveryBoy
+    ) {
+      order.deliveryBoy.status = "available";
+      await order.deliveryBoy.save();
+    }
+
+    /* ================= AUTO REFUND LOGIC ================= */
+    if (
+      status === "cancelled" &&
+      order.paymentMethod === "Online" &&
+      order.paymentStatus === "paid" &&
+      order.refundStatus === "none"
+    ) {
+      await autoRefund({
+        orderId: order._id,
+        paymentId: order.razorpayPaymentId,
+        amount: order.totalAmount,
+        reason: "Order cancelled"
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Order status updated",
+      order
+    });
+
+  } catch (error) {
+    console.error("UPDATE ORDER STATUS ERROR:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
+  }
+};
+
+export const getAdminDashboard = async (req, res) => {
+  try {
+    const { filter = "day", from, to } = req.query;
+
+    let startDate;
+    let endDate = new Date();
+
+    /* ================= DATE RANGE ================= */
+    if (from && to) {
+      startDate = new Date(from);
+      endDate = new Date(to);
+      endDate.setHours(23, 59, 59, 999);
+    } else {
+      startDate = new Date();
+      startDate.setHours(0, 0, 0, 0);
+
+      if (filter === "week") {
+        startDate.setDate(startDate.getDate() - 6);
+      }
+      if (filter === "month") {
+        startDate.setDate(1);
+      }
+      if (filter === "year") {
+        startDate = new Date(new Date().getFullYear(), 0, 1);
+      }
+    }
+
+    /* ================= FILTER QUERY ================= */
+    const dateMatch = {
+      createdAt: { $gte: startDate, $lte: endDate }
+    };
+
+    /* ================= ORDERS ================= */
+    const orders = await Order.find(dateMatch);
+
+    const todayOrders = orders.length;
+
+    /* ================= REVENUE ================= */
+    const todayRevenue = orders
+      .filter(
+        o =>
+          o.orderStatus === "delivered" &&
+          (o.paymentMethod === "COD" ||
+            (o.paymentMethod === "Online" && o.paymentStatus === "paid"))
+      )
+      .reduce((sum, o) => sum + o.totalAmount, 0);
+
+    /* ================= USERS ================= */
+    const totalUsers = await User.countDocuments();
+
+    const totalOrders = await Order.countDocuments();
+
+    /* ================= STATUS COUNTS ================= */
+    const statusCounts = {
+      placed: 0,
+      preparing: 0,
+      assigned: 0,
+      out_for_delivery: 0,
+      delivered: 0,
+      cancelled: 0
+    };
+
+    orders.forEach(o => {
+      statusCounts[o.orderStatus]++;
+    });
+
+    /* ================= PAYMENT SPLIT ================= */
+    const paymentSplit = { cod: 0, online: 0 };
+
+    orders.forEach(o => {
+      if (o.orderStatus !== "delivered") return;
+
+      if (o.paymentMethod === "COD") {
+        paymentSplit.cod += o.totalAmount;
+      }
+      if (o.paymentMethod === "Online" && o.paymentStatus === "paid") {
+        paymentSplit.online += o.totalAmount;
+      }
+    });
+
+    /* ================= CHART DATA ================= */
+    const chartMap = {};
+
+    orders.forEach(o => {
+      if (o.orderStatus !== "delivered") return;
+
+      const key = o.createdAt.toISOString().slice(0, 10);
+
+      if (!chartMap[key]) {
+        chartMap[key] = { orders: 0, revenue: 0 };
+      }
+
+      chartMap[key].orders += 1;
+      chartMap[key].revenue += o.totalAmount;
+    });
+
+    const ordersChart = [];
+    const revenueChart = [];
+
+    Object.keys(chartMap)
+      .sort()
+      .forEach(date => {
+        ordersChart.push({
+          name: date,
+          orders: chartMap[date].orders
+        });
+        revenueChart.push({
+          name: date,
+          revenue: chartMap[date].revenue
+        });
+      });
+
+    /* ================= RESPONSE ================= */
+    res.json({
+      success: true,
+      stats: {
+        totalOrders,
+        todayOrders,
+        todayRevenue,
+        totalUsers
+      },
+      statusCounts,
+      paymentSplit,
+      charts: {
+        orders: ordersChart,
+        revenue: revenueChart
+      }
+    });
+
+  } catch (err) {
+    console.error("ADMIN DASHBOARD ERROR:", err);
+    res.status(500).json({
+      success: false,
+      message: "Dashboard fetch failed"
+    });
+  }
+};
+
+
+

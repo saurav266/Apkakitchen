@@ -1,6 +1,8 @@
 import bcrypt from "bcryptjs";
 import User from "../model/userSchema.js";
+import Order from "../model/orderSchema.js";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 import {
   sendVerificationCode,
    sendWelcomeBackEmail,
@@ -9,6 +11,7 @@ import {
 } from "../services/emailService.js";
 import { generateToken } from "../utils/generateToken.js";
 import crypto from "crypto";
+import { autoRefund } from "../utils/autoRefund.js";
 
 
 /* REGISTER */
@@ -226,6 +229,7 @@ export const loginUser = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        role: user.role
       },
     });
   } catch (err) {
@@ -625,6 +629,173 @@ export const setCurrentAddress = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message
+    });
+  }
+};
+
+
+// my order
+export const getMyOrders = async (req, res) => {
+  try {
+    if (req.user.role !== "user") {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied",
+      });
+    }
+
+    const orders = await Order.find({ userId: req.user.id })
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      orders,
+    });
+  } catch (error) {
+    console.error("GET MY ORDERS ERROR:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch orders",
+    });
+  }
+};
+
+export const getOrderById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // ✅ CRITICAL FIX: Validate MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid order ID"
+      });
+    }
+
+    const order = await Order.findById(id)
+      .populate("items.productId", "name price")
+      .populate("userId", "name email")
+      .populate("deliveryBoy", "name phone");
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
+    }
+
+    // ✅ AUTHORIZATION
+    if (
+      req.user.role === "user" &&
+      order.userId._id.toString() !== req.user.id.toString()
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied"
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      order
+    });
+
+  } catch (error) {
+    console.error("GET ORDER BY ID ERROR:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch order"
+    });
+  }
+};
+export const cancelOrderByUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    if (!reason) {
+      return res.status(400).json({
+        success: false,
+        message: "Cancellation reason is required"
+      });
+    }
+
+    const order = await Order.findById(id);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
+    }
+
+    /* 🔐 OWNERSHIP CHECK */
+    if (order.userId.toString() !== req.user.id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to cancel this order"
+      });
+    }
+
+    /* ⛔ ALREADY CANCELLED */
+    if (order.orderStatus === "cancelled") {
+      return res.status(400).json({
+        success: false,
+        message: "Order already cancelled"
+      });
+    }
+
+    /* ⛔ BLOCK AFTER ASSIGNMENT */
+    if (
+      ["assigned", "out_for_delivery", "delivered"].includes(
+        order.orderStatus
+      )
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Order cannot be cancelled after assignment"
+      });
+    }
+
+    /* ✅ ALLOWED ONLY WHEN PLACED */
+    if (order.orderStatus !== "placed") {
+      return res.status(400).json({
+        success: false,
+        message: "Order cannot be cancelled at this stage"
+      });
+    }
+
+    /* 🔁 UPDATE ORDER */
+    order.orderStatus = "cancelled";
+    order.cancelReason = reason;
+    order.cancelledBy = "user";
+
+    await order.save();
+
+    /* 💰 AUTO REFUND (ONLINE ONLY) */
+    if (
+      order.paymentMethod === "Online" &&
+      order.paymentStatus === "paid" &&
+      order.refundStatus === "none"
+    ) {
+      await autoRefund({
+        orderId: order._id,
+        paymentId: order.razorpayPaymentId,
+        amount: order.totalAmount,
+        reason: "Order cancelled by user"
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "Order cancelled successfully"
+    });
+
+  } catch (error) {
+    console.error("❌ Cancel error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error"
     });
   }
 };

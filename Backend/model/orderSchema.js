@@ -8,7 +8,18 @@ const orderSchema = new mongoose.Schema(
       required: true
     },
 
-    deliveryBoyId: {
+    // 🔹 SNAPSHOT CUSTOMER DATA
+    customerName: {
+      type: String,
+      required: true
+    },
+
+    customerPhone: {
+      type: String,
+      required: true
+    },
+
+    deliveryBoy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "DeliveryBoy"
     },
@@ -41,19 +52,43 @@ const orderSchema = new mongoose.Schema(
       enum: ["pending", "paid"],
       default: "pending"
     },
-
+    razorpayOrderId: String,
+    razorpayPaymentId: String,
+    razorpaySignature: String,
+refundStatus: {
+  type: String,
+  enum: ["none", "initiated", "completed", "failed"],
+  default: "none"
+},
+refundId: String,
+refundAmount: Number,
     orderStatus: {
-      type: String,
-      enum: [
-        "placed",
-        "preparing",
-        "out_for_delivery",
-        "delivered",
-        "cancelled"
-      ],
-      default: "placed"
-    },
+  type: String,
+  enum: [
+    "placed",
+    "preparing",
+    "assigned",        // ✅ ADD THIS
+    "out_for_delivery",
+    "delivered",
+    "cancelled"
+  ],
+  default: "placed"
+},
 
+cancelReason: {
+  type: String
+},
+cancelledBy: {
+  type: String,
+  enum: ["delivery", "admin", "user"]
+},
+deliveryOtp: {
+  type: String
+},
+deliveryOtpVerified: {
+  type: Boolean,
+  default: false
+},
     deliveryAddress: {
       type: String,
       required: true
