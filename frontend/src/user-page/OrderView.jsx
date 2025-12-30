@@ -205,14 +205,10 @@ useEffect(() => {
           </p>
         )}
       </div>
-      {order.orderStatus === "placed" &&
- order.refundStatus === "none" && (
-  <button
-    onClick={handleCancelOrder}
-    className="w-full bg-red-600 text-white py-3 rounded-xl font-semibold mb-6"
-  >
-    Cancel Order
-  </button>
+      {order.orderStatus === "cancelled" && (
+  <span className="px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+    Order Cancelled
+  </span>
 )}
 
 {order.refundStatus && order.refundStatus !== "none" && (
@@ -240,27 +236,24 @@ useEffect(() => {
 )}
 
 {order.paymentMethod === "Online" &&
- order.paymentStatus === "paid" &&
- order.deliveryOtp &&
- !order.deliveryOtpVerified &&
- order.refundStatus === "none" &&
- order.orderStatus !== "cancelled" &&
- order.orderStatus !== "delivered" && (
-  <div className="bg-green-50 border border-green-200 p-4 rounded-xl mb-6">
-    <p className="font-semibold text-green-700">
-      Delivery OTP
-    </p>
-
-    <p className="text-3xl font-bold tracking-widest mt-1">
-      {order.deliveryOtp}
-    </p>
-
-    <p className="text-sm text-gray-500 mt-1">
-      Share this OTP with delivery partner to receive your order
-    </p>
-  </div>
+  order.paymentStatus === "paid" &&
+  order.orderStatus === "out_for_delivery" &&
+  order.deliveryOtp &&
+  !order.deliveryOtpVerified &&
+  order.refundStatus === "none" &&
+  order.orderStatus !== "cancelled" && (
+    <div className="bg-green-50 border border-green-200 p-4 rounded-xl mb-6">
+      <p className="font-semibold text-green-700">
+        Delivery OTP
+      </p>
+      <p className="text-3xl font-bold tracking-widest mt-1">
+        {order.deliveryOtp}
+      </p>
+      <p className="text-sm text-gray-500 mt-1">
+        Share this OTP with delivery partner to receive your order
+      </p>
+    </div>
 )}
-
 
 
       {/* ITEMS */}
