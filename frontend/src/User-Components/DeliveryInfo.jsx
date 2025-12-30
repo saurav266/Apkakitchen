@@ -32,63 +32,44 @@ export default function DeliveryInfo() {
       <div className="max-w-7xl mx-auto px-6">
 
         {/* 🏷️ Heading */}
-        <div className="text-center mb-12">
-          
-          <div className="relative inline-flex items-center gap-3">
-            
-            {/* Floating clock beside title */}
-            {/* <motion.img
-              src={clockImg}
-              alt="30 min delivery"
-              className="
-                absolute
-                left-2 sm:left-4 md:left-6
-                top-32 sm:top-36 md:top-40
-                w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16
-                object-contain
-                scale-340 z-10
-                hidden sm:block
+<div className="relative mb-12">
 
-              "
-              animate={{ y: [0, -8, 0] }}
-              transition={{
-                duration: 2.4,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
-            /> */}
+  {/* Title row */}
+  <div className="flex items-center justify-center md:justify-start">
+    <h2 className="text-4xl md:text-5xl font-bold">
+      Why We’re <span className="text-orange-600">Super Fast</span>
+    </h2>
+  </div>
 
-            <h2 className="text-4xl md:text-5xl font-bold">
-              Why We’re <span className="text-orange-600">Super Fast</span>
-            </h2>
+  {/* Clock aligned with title */}
+  <motion.img
+    src={clockImg}
+    alt="30 min delivery"
+    className="
+      absolute
+      right-6 md:right-12 lg:right-20
+      top-1/2
+      -translate-y-1/2
+      w-20 h-20 md:w-28 md:h-28
+      object-contain
+      z-20
+      drop-shadow-[0_15px_30px_rgba(255,165,0,0.45)]
+      scale-180
+      hidden sm:block
+    "
+    animate={{ y: [0, -10, 0] }}
+    transition={{
+      duration: 3,
+      repeat: Infinity,
+      ease: 'easeInOut',
+    }}
+  />
 
-          </div>
+  <p className="mt-3 text-gray-600 italic text-lg text-center md:text-left">
+    From our kitchen to your home — lightning fast delivery!
+  </p>
+</div>
 
-          <p className="mt-3 text-gray-600 italic text-lg">
-            From our kitchen to your home — lightning fast delivery!
-          </p>
-        </div>
-        <motion.img
-            src={clockImg}
-            alt="30 min delivery"
-            className="
-              absolute
-              left-1/2
-              -translate-x-1/2
-              top-[220px] md:top-[240px]
-              w-20 h-20 md:w-28 md:h-28
-              object-contain
-              z-20
-              drop-shadow-[0_15px_30px_rgba(255,165,0,0.45)]
-              hidden sm:block
-            "
-            animate={{ y: [0, -14, 0] }}
-            transition={{
-              duration: 3,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-          />
 
 
         {/* 📦 Feature Cards */}
