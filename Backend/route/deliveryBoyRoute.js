@@ -7,7 +7,8 @@ import { getAssignedOrders,
   acceptOrder,markOrderDelivered,
   getDeliveryEarnings,getDeliveredPaymentSummary,
   getDeliveredOrders,getOrderDetails,getDeliveryProfile,
-  updateDeliveryProfile,cancelDeliveryOrder
+  updateDeliveryProfile,cancelDeliveryOrder,
+  deliverOrderWithoutOtp
 } from "../controller/deliveryBoyController.js";
 
 const router = express.Router();
@@ -31,10 +32,16 @@ router.post(
   acceptOrder
 );
 router.post(
-  "/orders/:id/delivered",
+  "/orders/:id/delivered-with-otp",
   protect,
   authorizeRoles("delivery"),
   markOrderDelivered
+);
+router.post(
+  "/orders/:id/deliver-without-otp",
+  protect,
+  authorizeRoles("delivery"),
+  deliverOrderWithoutOtp
 );
 router.get(
   "/earnings",

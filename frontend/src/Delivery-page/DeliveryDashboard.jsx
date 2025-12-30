@@ -126,7 +126,7 @@ export default function DeliveryDashboard() {
       setOtpLoading(true);
 
       await axios.post(
-  `${API}/api/delivery/orders/${otpOrder._id}/delivered`,
+  `${API}/api/delivery/orders/${otpOrder._id}/delivered-with-otp`,
   { otp },
   { withCredentials: true }
 );
@@ -144,6 +144,18 @@ export default function DeliveryDashboard() {
       setOtpLoading(false);
     }
   };
+
+  const deliverWithoutOtp = async (order) => {
+  await axios.post(
+    `${API}/api/delivery/orders/${order._id}/deliver-without-otp`,
+    {},
+    { withCredentials: true }
+  );
+
+  alert("Order delivered successfully");
+  setOrders(prev => prev.filter(o => o._id !== order._id));
+  fetchOrders();
+};
 
   /* ================= CANCEL DELIVERY ================= */
   const cancelAcceptedOrder = async () => {
@@ -205,15 +217,22 @@ export default function DeliveryDashboard() {
           ) : (
             orders.map(order => (
               <OrderCard
-                key={order._id}
-                order={order}
-                dark={dark}
-                onAccept={acceptOrder}
-                onReject={rejectOrder}
-                onDeliver={openOtpModal}
-                onCancel={setCancelOrder}
-                onView={() => setSelectedOrder(order)}
-              />
+  key={order._id}
+  order={order}
+  dark={dark}
+  onAccept={acceptOrder}
+  onReject={rejectOrder}
+  onDeliver={(order) => {
+    if (order.paymentMethod === "online") {
+      openOtpModal(order);        // OTP flow
+    } else {
+      deliverWithoutOtp(order);  // NO OTP flow
+    }
+  }}
+  onCancel={setCancelOrder}
+  onView={() => setSelectedOrder(order)}
+/>
+
             ))
           )}
         </div>
@@ -352,22 +371,30 @@ function OrderCard({ order, onAccept, onReject, onDeliver, onCancel, onView, dar
           </>
         )}
 
-        {isAccepted && (
-          <>
-            <button
-              onClick={() => onDeliver(order)}
-              className="flex-1 bg-blue-600 text-white py-2 rounded-xl"
-            >
-              Delivered (OTP)
-            </button>
-            <button
-              onClick={() => onCancel(order)}
-              className="w-full bg-red-600 text-white py-2 rounded-xl"
-            >
-              Cancel Delivery
-            </button>
-          </>
-        )}
+       {isAccepted && (
+  <>
+    <button
+      onClick={() => onDeliver(order)}
+      className={`flex-1 py-2 rounded-xl text-white ${
+        order.paymentMethod === "online"
+          ? "bg-blue-600"
+          : "bg-green-600"
+      }`}
+    >
+      {order.paymentMethod === "online"
+        ? "Delivered (OTP)"
+        : "Delivered"}
+    </button>
+
+    <button
+      onClick={() => onCancel(order)}
+      className="w-full bg-red-600 text-white py-2 rounded-xl"
+    >
+      Cancel Delivery
+    </button>
+  </>
+)}
+
       </div>
     </motion.div>
   );

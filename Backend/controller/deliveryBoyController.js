@@ -200,6 +200,46 @@ export const verifyByOtpDeliveryBoy = async (req, res) => {
   }
 };
  
+export const deliverOrderWithoutOtp = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const order = await Order.findById(id);
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    if (order.orderStatus !== "out_for_delivery") {
+      return res.status(400).json({
+        message: "Order is not out for delivery"
+      });
+    }
+
+    // 🚫 Safety: block online payments
+    if (order.paymentMethod === "online") {
+      return res.status(400).json({
+        message: "OTP delivery required for online payment"
+      });
+    }
+
+    /* ===== MARK DELIVERED ===== */
+    order.orderStatus = "delivered";
+    order.deliveredAt = new Date();
+    order.codCollected = true;
+
+    await order.save();
+
+    res.json({
+      success: true,
+      message: "Order delivered successfully (No OTP)"
+    });
+
+  } catch (error) {
+    console.error("Deliver without OTP error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
 
 /**
  * @desc    Login delivery boy
