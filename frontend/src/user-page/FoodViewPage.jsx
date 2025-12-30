@@ -9,6 +9,7 @@ import {
   ShoppingCart,
   Zap,
 } from "lucide-react";
+import Reviews from "../User-Components/ReviewSection.jsx";
 
 const API = "http://localhost:3000";
 
@@ -215,6 +216,10 @@ export default function FoodViewPage() {
             </div>
           )}
         </div>
+      </div>
+      {/* ================= REVIEWS ================= */}
+      <div className="max-w-6xl mx-auto mt-16">
+        <Reviews productId={food._id} />
       </div>
     </section>
   );

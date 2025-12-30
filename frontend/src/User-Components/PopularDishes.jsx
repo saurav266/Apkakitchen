@@ -1,33 +1,48 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import axios from "axios";
 
-import pizzaImg from "../assets/hero-section/pizza.png";
-import vegThali from "../assets/hero-section/veg-thali.png";
-import briyaniImg from "../assets/hero-section/biryani.png";
-import burgerImg from "../assets/hero-section/burger.png";
-import puriChole from "../assets/hero-section/puri-chole.png";
-
-const dishes = [
-  { id: 1, name: "Cheesy Pizza", price: 299, img: pizzaImg },
-  { id: 2, name: "Veg Thali", price: 249, img: vegThali },
-  { id: 3, name: "Chicken Biryani", price: 349, img: briyaniImg },
-  { id: 4, name: "Puri Chole", price: 199, img: puriChole },
-  { id: 5, name: "Burger", price: 129, img: burgerImg },
+const API = "http://localhost:3000";
+/* 🔥 CONTROL POPULAR ITEMS BY NAME ONLY */
+const POPULAR_DISH_NAMES = [
+  "Egg Biryani",
+  "Veg Noodles",
+  "Chicken Biryani",
+  "Chhola Poori Combo",
+  "Chicken 65",
 ];
 
 export default function PopularDishes() {
+  const [dishes, setDishes] = useState([]);
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
-  const total = dishes.length;
   const intervalRef = useRef(null);
 
-  // 🔁 Auto slide with pause on hover
+  /* 🔌 Fetch from backend */
   useEffect(() => {
-    if (!paused) {
+    const fetchPopular = async () => {
+      try {
+        const { data } = await axios.post(
+          `${API}/api/products/popular`,
+          { names: POPULAR_DISH_NAMES }
+        );
+        if (data.success) setDishes(data.products);
+      } catch (err) {
+        console.error("Failed to load popular dishes", err);
+      }
+    };
+    fetchPopular();
+  }, []);
+
+  const total = dishes.length;
+
+  /* 🔁 Auto slide */
+  useEffect(() => {
+    if (!paused && total > 0) {
       intervalRef.current = setInterval(() => {
         setIndex((i) => (i + 1) % total);
-      }, 3500);
+      }, 2000);
     }
     return () => clearInterval(intervalRef.current);
   }, [paused, total]);
@@ -35,7 +50,6 @@ export default function PopularDishes() {
   const next = () => setIndex((i) => (i + 1) % total);
   const prev = () => setIndex((i) => (i - 1 + total) % total);
 
-  // 👉 Position logic with far left & far right
   const getPos = (i) => {
     const diff = (i - index + total) % total;
     if (diff === 0) return "center";
@@ -46,63 +60,30 @@ export default function PopularDishes() {
     return "hidden";
   };
 
-  // 🎞️ Animation variants
   const variants = {
-    center: {
-      x: 0,
-      scale: 1.18,
-      opacity: 1,
-      zIndex: 5,
-      rotate: 0,
-    },
-    left: {
-      x: -260,
-      scale: 0.92,
-      opacity: 0.6,
-      zIndex: 4,
-      rotate: -8,
-    },
-    right: {
-      x: 260,
-      scale: 0.92,
-      opacity: 0.6,
-      zIndex: 4,
-      rotate: 8,
-    },
-    farLeft: {
-      x: -480,
-      scale: 0.8,
-      opacity: 0.35,
-      zIndex: 2,
-      rotate: -12,
-    },
-    farRight: {
-      x: 480,
-      scale: 0.8,
-      opacity: 0.35,
-      zIndex: 2,
-      rotate: 12,
-    },
-    hidden: {
-      opacity: 0,
-      scale: 0.6,
-      zIndex: 1,
-    },
+    center: { x: 0, scale: 1.18, opacity: 1, zIndex: 5 },
+    left: { x: -260, scale: 0.92, opacity: 0.6, zIndex: 4, rotate: -8 },
+    right: { x: 260, scale: 0.92, opacity: 0.6, zIndex: 4, rotate: 8 },
+    farLeft: { x: -480, scale: 0.8, opacity: 0.35, zIndex: 2 },
+    farRight: { x: 480, scale: 0.8, opacity: 0.35, zIndex: 2 },
+    hidden: { opacity: 0, scale: 0.6, zIndex: 1 },
   };
 
-  // 🛒 Add to cart
   const handleAddToCart = (dish) => {
     let cart = JSON.parse(localStorage.getItem("cart")) || [];
-    const found = cart.find((i) => i.id === dish.id);
+    const found = cart.find((i) => i._id === dish._id);
     if (found) found.qty += 1;
     else cart.push({ ...dish, qty: 1 });
     localStorage.setItem("cart", JSON.stringify(cart));
     window.dispatchEvent(new Event("cartUpdated"));
   };
 
+  if (!dishes.length) return null;
+
   return (
     <section className="py-28 bg-gradient-to-br from-orange-50 via-amber-50 to-red-50 overflow-hidden">
       <div className="max-w-7xl mx-auto px-6 text-center">
+
         <h2 className="text-4xl font-bold mb-16">
           Customer <span className="text-orange-600">Favorites</span>
         </h2>
@@ -112,94 +93,61 @@ export default function PopularDishes() {
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
         >
-          {/* ✨ Glow under center */}
           <div className="absolute w-72 h-16 bg-orange-400/40 blur-3xl rounded-full -bottom-4" />
 
-          {/* ⬅️ Arrow */}
-          <button
-            onClick={prev}
-            className="absolute left-0 md:left-10 z-20 w-12 h-12 rounded-full bg-white/70 backdrop-blur shadow flex items-center justify-center hover:scale-110 transition"
-          >
+          <button onClick={prev} className="absolute left-0 md:left-10 z-20 w-12 h-12 rounded-full bg-white/70 backdrop-blur shadow">
             <ChevronLeft className="w-6 h-6 text-orange-600" />
           </button>
 
-          {/* ➡️ Arrow */}
-          <button
-            onClick={next}
-            className="absolute right-0 md:right-10 z-20 w-12 h-12 rounded-full bg-white/70 backdrop-blur shadow flex items-center justify-center hover:scale-110 transition"
-          >
+          <button onClick={next} className="absolute right-0 md:right-10 z-20 w-12 h-12 rounded-full bg-white/70 backdrop-blur shadow">
             <ChevronRight className="w-6 h-6 text-orange-600" />
           </button>
 
-          {/* 🍔 Cards */}
-          {dishes.map((dish, i) => {
-            const pos = getPos(i);
+          {dishes.map((dish, i) => (
+            <motion.div
+              key={dish._id}
+              variants={variants}
+              animate={getPos(i)}
+              transition={{ duration: 0.6 }}
+              className="absolute w-[260px] md:w-[300px] h-[370px] rounded-3xl p-6 flex flex-col items-center justify-between bg-white/35 backdrop-blur-xl border border-white/40 shadow-[0_25px_60px_rgba(255,120,60,0.45)]"
+            >
+              <img
+                src={dish.image}
+                alt={dish.name}
+                className="h-40 object-contain drop-shadow-2xl scale-135"
+              />
 
-            return (
-              <motion.div
-                key={dish.id}
-                variants={variants}
-                animate={pos}
-                initial="hidden"
-                transition={{ duration: 0.6, ease: "easeInOut" }}
-                drag={pos === "center" ? "x" : false}
-                dragConstraints={{ left: 0, right: 0 }}
-                onDragEnd={(_, info) => {
-                  if (info.offset.x < -100) next();
-                  if (info.offset.x > 100) prev();
-                }}
-                className="
-                  absolute w-[260px] md:w-[300px] h-[370px]
-                  rounded-3xl p-6
-                  flex flex-col items-center justify-between
-                  bg-white/35 backdrop-blur-xl
-                  border border-white/40
-                  shadow-[0_25px_60px_rgba(255,120,60,0.45)]
-                "
+              <div>
+                <h3 className="text-xl font-semibold text-gray-800">
+                  {dish.name}
+                </h3>
+                <p className="text-orange-600 font-bold text-lg">
+                  ₹{dish.finalPrice}
+                </p>
+              </div>
+
+              <button
+                onClick={() => handleAddToCart(dish)}
+                className="w-full py-2 rounded-full bg-gradient-to-r from-orange-600 to-red-600 text-white font-semibold shadow-lg hover:scale-105 transition"
               >
-                <img
-                  src={dish.img}
-                  alt={dish.name}
-                  className="h-40 object-contain drop-shadow-2xl"
-                />
-
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-800">
-                    {dish.name}
-                  </h3>
-                  <p className="text-orange-600 font-bold text-lg">
-                    ₹{dish.price}
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => handleAddToCart(dish)}
-                  className="
-                    w-full py-2 rounded-full
-                    bg-gradient-to-r from-orange-600 to-red-600
-                    text-white font-semibold
-                    shadow-lg hover:scale-105 transition
-                  "
-                >
-                  Add to Cart
-                </button>
-              </motion.div>
-            );
-          })}
+                Add to Cart
+              </button>
+            </motion.div>
+          ))}
         </div>
 
-        {/* 🔘 Dots */}
         <div className="flex justify-center gap-3 mt-12">
           {dishes.map((_, i) => (
             <button
               key={i}
               onClick={() => setIndex(i)}
-              className={`w-3 h-3 rounded-full transition ${
+              className={`w-3 h-3 rounded-full ${
                 i === index ? "bg-orange-600 scale-125" : "bg-gray-300"
               }`}
             />
           ))}
         </div>
+
       </div>
     </section>
   );

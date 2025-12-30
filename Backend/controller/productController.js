@@ -56,12 +56,25 @@ export const addProduct = async (req, res) => {
 // 📄 Get all products
 export const getAllProducts = async (req, res) => {
   try {
-    const products = await Product.find().sort({ createdAt: -1 });
-    res.json({ success: true, products });
+    const products = await Product.find({ isAvailable: true }).lean();
+
+    const updatedProducts = products.map((p) => ({
+      ...p,
+      finalPrice:
+        p.discountPercentage > 0
+          ? Math.round(p.price - (p.price * p.discountPercentage) / 100)
+          : p.price,
+    }));
+
+    res.json({
+      success: true,
+      products: updatedProducts,
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
 
 // 📄 Get single product
 export const getProductById = async (req, res) => {
@@ -107,6 +120,40 @@ export const deleteProduct = async (req, res) => {
       return res.status(404).json({ success: false, message: "Not found" });
 
     res.json({ success: true, message: "Product deleted" });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// 📄 Get popular products by names
+export const getPopularProducts = async (req, res) => {
+  try {
+    const { names } = req.body;
+
+    if (!names || !Array.isArray(names)) {
+      return res.status(400).json({ success: false, message: "Names required" });
+    }
+
+    const products = await Product.find({
+      name: { $in: names },
+      isAvailable: true,
+    }).lean(); // 👈 IMPORTANT
+
+    // Calculate finalPrice dynamically
+    const calculated = products.map((p) => ({
+      ...p,
+      finalPrice:
+        p.discountPercentage > 0
+          ? Math.round(p.price - (p.price * p.discountPercentage) / 100)
+          : p.price,
+    }));
+
+    // Preserve order
+    const ordered = names
+      .map((n) => calculated.find((p) => p.name === n))
+      .filter(Boolean);
+
+    res.json({ success: true, products: ordered });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

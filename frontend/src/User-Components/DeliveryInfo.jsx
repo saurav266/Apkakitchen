@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Clock, MapPin, Package, ShieldCheck } from "lucide-react";
 import riderImg from "../assets/delivery/rider.png";
+import clockImg from "../assets/delivery/time.png"; // ⏰ clock PNG
 
 export default function DeliveryInfo() {
   const features = [
@@ -27,20 +28,70 @@ export default function DeliveryInfo() {
   ];
 
   return (
-    <section className="py-16 bg-gradient-to-br from-orange-50 via-amber-50 to-red-50 overflow-hidden">
+    <section className="relative py-16 bg-gradient-to-br from-orange-50 via-amber-50 to-red-50 overflow-hidden">
       <div className="max-w-7xl mx-auto px-6">
 
         {/* 🏷️ Heading */}
         <div className="text-center mb-12">
-          <h2 className="text-4xl md:text-5xl font-bold">
-            Why We’re <span className="text-orange-600">Super Fast</span>
-          </h2>
+          
+          <div className="relative inline-flex items-center gap-3">
+            
+            {/* Floating clock beside title */}
+            {/* <motion.img
+              src={clockImg}
+              alt="30 min delivery"
+              className="
+                absolute
+                left-2 sm:left-4 md:left-6
+                top-32 sm:top-36 md:top-40
+                w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16
+                object-contain
+                scale-340 z-10
+                hidden sm:block
+
+              "
+              animate={{ y: [0, -8, 0] }}
+              transition={{
+                duration: 2.4,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+            /> */}
+
+            <h2 className="text-4xl md:text-5xl font-bold">
+              Why We’re <span className="text-orange-600">Super Fast</span>
+            </h2>
+
+          </div>
+
           <p className="mt-3 text-gray-600 italic text-lg">
             From our kitchen to your home — lightning fast delivery!
           </p>
         </div>
+        <motion.img
+            src={clockImg}
+            alt="30 min delivery"
+            className="
+              absolute
+              left-1/2
+              -translate-x-1/2
+              top-[220px] md:top-[240px]
+              w-20 h-20 md:w-28 md:h-28
+              object-contain
+              z-20
+              drop-shadow-[0_15px_30px_rgba(255,165,0,0.45)]
+              hidden sm:block
+            "
+            animate={{ y: [0, -14, 0] }}
+            transition={{
+              duration: 3,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          />
 
-        {/* 📦 Top Feature Cards */}
+
+        {/* 📦 Feature Cards */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
           {features.map((f, i) => {
             const Icon = f.icon;
@@ -71,20 +122,13 @@ export default function DeliveryInfo() {
           })}
         </div>
 
-        {/* 🚴 Rider Animation Section */}
+        {/* 🚴 Rider Animation */}
         <div className="relative flex items-center justify-center h-[300px] overflow-hidden -mt-6">
 
-          {/* 🌄 Parallax background */}
-          <motion.div
-            className="absolute inset-0 bg-[url('/road-bg.png')] bg-repeat-x opacity-20"
-            animate={{ x: ["0%", "-60%"] }}
-            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          />
-
-          {/* ✨ Glow road */}
+          {/* Glow road */}
           <div className="absolute w-[500px] h-20 bg-orange-400/40 blur-3xl rounded-full bottom-12" />
 
-          {/* 🛣️ Speed road lines */}
+          {/* Speed lines */}
           {[...Array(5)].map((_, i) => (
             <motion.div
               key={i}
@@ -99,25 +143,24 @@ export default function DeliveryInfo() {
             />
           ))}
 
-          {/* 🏍️ Rider: single image seamless loop */}
-<motion.div
-  className="absolute z-10"
-  initial={{ x: "70vw" }}   // start closer to the edge
-  animate={{ x: "-120vw" }}  // move fully across
-  transition={{
-    duration: 12,            // keep speed the same
-    repeat: Infinity,
-    repeatType: "loop",
-    ease: "linear",
-  }}
->
-  <img
-    src={riderImg}
-    alt="Delivery Rider"
-    className="h-60 md:h-64 object-contain drop-shadow-2xl"
-  />
-</motion.div>
-
+          {/* Rider */}
+          <motion.div
+            className="absolute z-10"
+            initial={{ x: "70vw" }}
+            animate={{ x: "-120vw" }}
+            transition={{
+              duration: 12,
+              repeat: Infinity,
+              repeatType: "loop",
+              ease: "linear",
+            }}
+          >
+            <img
+              src={riderImg}
+              alt="Delivery Rider"
+              className="h-60 md:h-64 object-contain drop-shadow-2xl"
+            />
+          </motion.div>
         </div>
 
       </div>

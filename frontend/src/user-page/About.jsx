@@ -9,7 +9,7 @@ export default function About() {
   const stats = [
     { icon: Users, value: "10k+", label: "Happy Customers" },
     { icon: ChefHat, value: "15+", label: "Expert Chefs" },
-    { icon: Flame, value: "50+", label: "Signature Dishes" },
+    { icon: Flame, value: "15+", label: "Signature Dishes" },
     { icon: Heart, value: "100%", label: "Made with Love" },
   ];
 

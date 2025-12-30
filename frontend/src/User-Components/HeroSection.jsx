@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 // images
 import vegnoddles from "../assets/hero-section/veg-noodles.png";
@@ -49,6 +50,7 @@ const foods = [
 export default function HeroApnaKitchen() {
   const [index, setIndex] = useState(0);
   const current = foods[index];
+  const navigate = useNavigate();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -110,6 +112,7 @@ export default function HeroApnaKitchen() {
           <motion.button
             whileHover={{ scale: 1.08 }}
             whileTap={{ scale: 0.96 }}
+            onClick={() => navigate("/menu")}
             className="
               mt-6 px-10 py-4 rounded-full
               bg-gradient-to-r from-orange-600 to-red-600
