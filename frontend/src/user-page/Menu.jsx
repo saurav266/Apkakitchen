@@ -118,7 +118,7 @@ export default function Menu() {
                 key={t}
                 onClick={() => setFoodType(t)}
                 className={`
-                  px-5 py-2 rounded-full text-sm font-medium transition
+                  px-5 py-2 rounded-full text-sm font-medium transition 
                   ${
                     foodType === t
                       ? t === "veg"
@@ -180,15 +180,15 @@ export default function Menu() {
                   onClick={() => navigate(`/food/${item._id}`)}
                   className={`
                     bg-white/90 rounded-2xl shadow-lg overflow-hidden flex flex-col
-                    border-2 cursor-pointer
+                    border-2 cursor-pointer 
                     ${isVeg ? "border-green-200" : "border-red-200"}
                   `}
                 >
                   {/* Image */}
-                  <div className="h-48 bg-orange-50 flex items-center justify-center overflow-hidden relative">
+                  <div className="h-48bg-orange-50 flex items-center justify-center overflow-hidden relative">
                     <span
                       className={`
-                        absolute top-3 right-3 text-xs font-semibold px-2 py-1 rounded-full
+                        absolute top-3 right-3 text-xs font-semibold px-2 py-1 rounded-full z-10
                         ${isVeg ? "bg-green-500 text-white" : "bg-red-500 text-white"}
                       `}
                     >
@@ -198,7 +198,7 @@ export default function Menu() {
                     <motion.img
                       src={item.image}
                       alt={item.name}
-                      className="h-40 object-contain"
+                      className="h-48 w-full scale-134 object-contain"
                       whileHover={{ scale: 1.15 }}
                       transition={{ duration: 0.4 }}
                     />

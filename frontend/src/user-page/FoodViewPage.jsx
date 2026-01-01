@@ -104,7 +104,7 @@ export default function FoodViewPage() {
             <img
               src={food.image}
               alt={food.name}
-              className="relative z-10 w-80 h-80 object-contain drop-shadow-2xl"
+              className="relative z-10 w-90 h-90 object-contain  scale-150 rounded-md"
             />
           </motion.div>
 

@@ -3,12 +3,10 @@ import { Plus, Pencil, Trash2, Image as ImageIcon, Upload } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import { toast } from "react-hot-toast";
-
+const API_URL = "http://localhost:3000";
 const CATEGORY_OPTIONS = [
-  "veg",
-  "non-veg",
   "thali",
-  "briyani",
+  "biryani",
   "chinese",
   "indian",
 ];
@@ -25,7 +23,7 @@ export default function AdminProducts() {
 
   const fetchProducts = async () => {
     try {
-      const { data } = await axios.get("/api/products", {
+      const { data } = await axios.get(`${API_URL}/api/products`, {
         withCredentials: true,
       });
       if (data.success) setProducts(data.products);
@@ -113,12 +111,12 @@ export default function AdminProducts() {
 
   try {
     if (editItem) {
-      await axios.put(`/api/products/${editItem._id}`, payload, {
+      await axios.put(`${API_URL}/api/products/${editItem._id}`, payload, {
         withCredentials: true,
       });
       toast.success("Product updated 🎉");
     } else {
-      await axios.post(`/api/products/add`, payload, {
+      await axios.post(`${API_URL}/api/products/add`, payload, {
         withCredentials: true,
       });
       toast.success("Product added 🍽️");
@@ -136,7 +134,7 @@ export default function AdminProducts() {
 
   const handleDelete = async (id) => {
     if (confirm("Delete this product?")) {
-      await axios.delete(`/api/products/${id}`, {
+      await axios.delete(`${API_URL}/api/products/${id}`, {
         withCredentials: true,
       });
       fetchProducts();
@@ -156,7 +154,7 @@ export default function AdminProducts() {
       }
 
       await axios.post(
-        "/api/products/bulk",
+        `${API_URL}/api/products/bulk`,
         { products: list },
         { withCredentials: true }
       );

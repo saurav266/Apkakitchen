@@ -13,7 +13,7 @@ const productSchema = new mongoose.Schema(
     category: {
       type: String,
       required: true,
-      enum: ["veg", "non-veg", "thali", "briyani","chinese","indian"]
+      enum: ["thali", "biryani", "chinese", "indian"]
     },
 
     // Food description
