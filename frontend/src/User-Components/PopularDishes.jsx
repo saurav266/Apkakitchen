@@ -3,6 +3,12 @@ import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import axios from "axios";
 
+import biryaniImg from "../assets/hero-section/biryani.png";
+import noodlesImg from "../assets/hero-section/veg-noodles.png";
+import eggBiryaniImg from "../assets/hero-section/egg-biryani.png";
+import chholaComboImg from "../assets/hero-section/puri-chole.png";
+import chicken65Img from "../assets/hero-section/chicken65.png";
+
 const API = "http://localhost:3000";
 /* 🔥 CONTROL POPULAR ITEMS BY NAME ONLY */
 const POPULAR_DISH_NAMES = [
@@ -12,7 +18,13 @@ const POPULAR_DISH_NAMES = [
   "Chhola Poori Combo",
   "Chicken 65",
 ];
-
+const DISH_NAME_TO_IMAGE = {
+  "Egg Biryani": eggBiryaniImg,
+  "Veg Noodles": noodlesImg,
+  "Chicken Biryani": biryaniImg,
+  "Chhola Poori Combo": chholaComboImg,
+  "Chicken 65": chicken65Img,
+};
 export default function PopularDishes() {
   const [dishes, setDishes] = useState([]);
   const [index, setIndex] = useState(0);
@@ -64,8 +76,8 @@ export default function PopularDishes() {
     center: { x: 0, scale: 1.18, opacity: 1, zIndex: 5 },
     left: { x: -260, scale: 0.92, opacity: 0.6, zIndex: 4, rotate: -8 },
     right: { x: 260, scale: 0.92, opacity: 0.6, zIndex: 4, rotate: 8 },
-    farLeft: { x: -480, scale: 0.8, opacity: 0.35, zIndex: 2 },
-    farRight: { x: 480, scale: 0.8, opacity: 0.35, zIndex: 2 },
+    farLeft: { x: -480, scale: 0.8, opacity: 0.35, zIndex: 2, rotate: -12 },
+    farRight: { x: 480, scale: 0.8, opacity: 0.35, zIndex: 2, rotate: 12 },
     hidden: { opacity: 0, scale: 0.6, zIndex: 1 },
   };
 
@@ -112,7 +124,7 @@ export default function PopularDishes() {
               className="absolute w-[260px] md:w-[300px] h-[370px] rounded-3xl p-6 flex flex-col items-center justify-between bg-white/35 backdrop-blur-xl border border-white/40 shadow-[0_25px_60px_rgba(255,120,60,0.45)]"
             >
               <img
-                src={dish.image}
+                src={DISH_NAME_TO_IMAGE[dish.name] || dish.image}
                 alt={dish.name}
                 className="h-40 object-contain drop-shadow-2xl scale-135"
               />
