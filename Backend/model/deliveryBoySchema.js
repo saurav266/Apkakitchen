@@ -18,7 +18,14 @@ const deliveryBoySchema = new mongoose.Schema(
     /* ================= BASIC PROFILE ================= */
     name: { type: String, required: true, trim: true },
     phone: { type: String, required: true, unique: true },
-    email: { type: String, unique: true, sparse: true },
+    email: {
+  type: String,
+  required: true,
+  unique: true,
+  lowercase: true,
+  trim: true
+},
+
 
     /* ================= ROLE ================= */
     role: {
@@ -66,7 +73,7 @@ const deliveryBoySchema = new mongoose.Schema(
     /* ================= COD SETTLEMENT ================= */
     pendingCOD: {
       type: Number,
-      default: 0        // 💰 admin must collect this
+      default: 0
     },
 
     lastSettlementAmount: {
@@ -75,6 +82,15 @@ const deliveryBoySchema = new mongoose.Schema(
     },
 
     lastSettlementDate: {
+      type: Date
+    },
+
+    /* ================= FORGOT PASSWORD (✅ REQUIRED) ================= */
+    forgetPasswordToken: {
+      type: String
+    },
+
+    forgetPasswordExpiry: {
       type: Date
     },
 

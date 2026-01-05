@@ -15,6 +15,11 @@ export default function Login() {
   const [typing, setTyping] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const [showForgot, setShowForgot] = useState(false);
+const [forgotEmail, setForgotEmail] = useState("");
+const [forgotLoading, setForgotLoading] = useState(false);
+
+
   // 🔐 Submit with backend API
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -61,6 +66,36 @@ export default function Login() {
       return () => clearTimeout(t);
     }
   }, [typing]);
+
+  const handleForgotPassword = async () => {
+  if (!forgotEmail) {
+    return alert("Please enter your email");
+  }
+
+  try {
+    setForgotLoading(true);
+
+    const res = await fetch(
+      "http://localhost:3000/api/auth/forgot-password",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: forgotEmail }),
+      }
+    );
+
+    const data = await res.json();
+
+    alert(data.message || "If account exists, reset link sent");
+    setShowForgot(false);
+    setForgotEmail("");
+
+  } catch (err) {
+    alert("Server not reachable");
+  } finally {
+    setForgotLoading(false);
+  }
+};
 
   return (
     <section className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-amber-50 to-red-50 px-4 overflow-hidden">
@@ -152,11 +187,13 @@ export default function Login() {
                 Remember me
               </label>
               <button
-                type="button"
-                className="text-orange-600 hover:underline"
-              >
-                Forgot password?
-              </button>
+  type="button"
+  onClick={() => setShowForgot(true)}
+  className="text-orange-600 hover:underline"
+>
+  Forgot password?
+</button>
+
             </div>
 
             {/* Button */}
@@ -183,6 +220,48 @@ export default function Login() {
           </p>
         </motion.div>
       </div>
+      {showForgot && (
+  <div className="fixed inset-0 bg-black/50 z-[2000] flex items-center justify-center">
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="bg-white rounded-2xl p-6 w-[90%] max-w-md"
+    >
+      <h3 className="text-xl font-bold mb-2">
+        Reset Password
+      </h3>
+      <p className="text-sm text-gray-500 mb-4">
+        Enter your registered email. We’ll send a reset link.
+      </p>
+
+      <input
+        type="email"
+        value={forgotEmail}
+        onChange={(e) => setForgotEmail(e.target.value)}
+        placeholder="you@example.com"
+        className="w-full border rounded-xl px-4 py-3 mb-4"
+      />
+
+      <div className="flex gap-2">
+        <button
+          onClick={() => setShowForgot(false)}
+          className="flex-1 bg-gray-200 py-2 rounded-xl"
+        >
+          Cancel
+        </button>
+
+        <button
+          onClick={handleForgotPassword}
+          disabled={forgotLoading}
+          className="flex-1 bg-orange-600 text-white py-2 rounded-xl"
+        >
+          {forgotLoading ? "Sending..." : "Send Link"}
+        </button>
+      </div>
+    </motion.div>
+  </div>
+)}
+
     </section>
   );
 }

@@ -5,7 +5,6 @@ import { io }  from "../server.js";
 import crypto from "crypto";
 import { autoRefund } from "../utils/autoRefund.js"
 
-
 /**
  * @desc    Add new delivery boy
  * @route   POST /api/admin/delivery-boy
@@ -26,20 +25,20 @@ import { sendAddDeliveryBoyOtpEmail } from "../services/emailService.js";
  */
 
 
-// const fixPassword = async () => {
-//   const newPassword = "Krishna@12345";
+const fixPassword = async () => {
+  const newPassword = "Krishna@123456";
 
-//   const hash = await bcrypt.hash(newPassword, 10);
+  const hash = await bcrypt.hash(newPassword, 10);
 
-//   await DeliveryBoy.updateOne(
-//     { email: "krishna852323@gmail.com" },
-//     { $set: { password: hash } }
-//   );
+  await DeliveryBoy.updateOne(
+    { email: "krishna852323@gmail.com" },
+    { $set: { password: hash } }
+  );
 
-//   console.log("Password reset successfully");
-// };
+  console.log("Password reset successfully");
+};
 
-// fixPassword();
+fixPassword();
 export const addDeliveryBoy = async (req, res) => {
   try {
     const {

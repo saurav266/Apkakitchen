@@ -5,51 +5,58 @@ import Order from "../model/orderSchema.js";
 // ➕ Add review
 export const addReview = async (req, res) => {
   try {
-    const { rating, comment } = req.body;
+    const { rating, comment, orderId } = req.body;
     const { productId } = req.params;
 
-    const user = req.user; // from auth middleware
+    const userId = req.user.id;
 
-    if (!rating) {
-      return res.status(400).json({ success: false, message: "Rating required" });
+    if (!orderId) {
+      return res.status(400).json({
+        message: "Order ID is required to add review"
+      });
     }
 
-    // Prevent duplicate review
+    if (!rating || Number(rating) < 1 || Number(rating) > 5) {
+      return res.status(400).json({ message: "Invalid rating" });
+    }
+
+    // Prevent duplicate review (same user + product + order)
     const exists = await Review.findOne({
       product: productId,
-      user: user._id,
+      user: userId,
+      order: orderId
     });
 
     if (exists) {
       return res.status(400).json({
-        success: false,
-        message: "You already reviewed this item",
+        message: "You already reviewed this product for this order"
       });
     }
 
     const review = await Review.create({
       product: productId,
-      user: user._id,
-      name: user.name,
-      rating,
+      user: userId,
+      order: orderId,          // ✅ FIXED HERE
+      name: req.user.data.name,
+      rating: Number(rating),
       comment,
+      verified: true
     });
 
-    // ⭐ Update product rating
-    const reviews = await Review.find({ product: productId });
-    const avg =
-      reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
-
-    await Product.findByIdAndUpdate(productId, {
-      rating: avg.toFixed(1),
-      totalReviews: reviews.length,
+    return res.status(201).json({
+      success: true,
+      review
     });
 
-    res.json({ success: true, review });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error("ADD REVIEW ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
   }
 };
+
+
+
+
 
 // 📄 Get reviews
 export const getReviews = async (req, res) => {

@@ -3,7 +3,7 @@ import { Plus, Pencil, Trash2, Image as ImageIcon, Upload } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import { toast } from "react-hot-toast";
-
+const BACKED_URl="http://localhost:3000"
 const CATEGORY_OPTIONS = [
   "veg",
   "non-veg",
@@ -25,7 +25,7 @@ export default function AdminProducts() {
 
   const fetchProducts = async () => {
     try {
-      const { data } = await axios.get("/api/products", {
+      const { data } = await axios.get(`${BACKED_URl}/api/products`, {
         withCredentials: true,
       });
       if (data.success) setProducts(data.products);
@@ -113,7 +113,7 @@ export default function AdminProducts() {
 
   try {
     if (editItem) {
-      await axios.put(`/api/products/${editItem._id}`, payload, {
+      await axios.put(`${BACKED_URl}/api/products/${editItem._id}`, payload, {
         withCredentials: true,
       });
       toast.success("Product updated 🎉");
@@ -136,7 +136,7 @@ export default function AdminProducts() {
 
   const handleDelete = async (id) => {
     if (confirm("Delete this product?")) {
-      await axios.delete(`/api/products/${id}`, {
+      await axios.delete(`${BACKED_URl}/api/products/${id}`, {
         withCredentials: true,
       });
       fetchProducts();
@@ -156,7 +156,7 @@ export default function AdminProducts() {
       }
 
       await axios.post(
-        "/api/products/bulk",
+        "${BACKED_URl}/api/products/bulk",
         { products: list },
         { withCredentials: true }
       );

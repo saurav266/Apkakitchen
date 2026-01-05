@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import 'dotenv/config'
 import User from "../model/userSchema.js";
 import Order from "../model/orderSchema.js";
 import jwt from "jsonwebtoken";
@@ -12,6 +13,7 @@ import {
 import { generateToken } from "../utils/generateToken.js";
 import crypto from "crypto";
 import { autoRefund } from "../utils/autoRefund.js";
+import DeliveryBoy from "../model/deliveryBoySchema.js";
 
 
 /* REGISTER */
@@ -254,42 +256,62 @@ export const logoutUser = (req, res) => {
 
 
 
-
 export const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
 
-    if (!email)
+    if (!email) {
       return res.status(400).json({ message: "Email required" });
+    }
 
-    const user = await User.findOne({ email });
-    if (!user)
-      return res.status(200).json({
-        message: "If account exists, reset link sent",
+    // 🔍 1. Check USER first
+    let account = await User.findOne({ email });
+    let role = "user";
+
+    // 🔍 2. If not found, check DELIVERY
+    if (!account) {
+      account = await DeliveryBoy.findOne({ email });
+      role = "delivery";
+    }
+
+    // ✅ Always return success (security best practice)
+    if (!account) {
+      return res.json({
+        success: true,
+        message: "If account exists, reset link sent"
       });
+    }
 
-    // Generate secure token
+    // 🔐 Generate token
     const resetToken = crypto.randomBytes(32).toString("hex");
     const hashedToken = crypto
       .createHash("sha256")
       .update(resetToken)
       .digest("hex");
 
-    user.forgetPasswordToken = hashedToken;
-    user.forgetPasswordExpiry = Date.now() + 15 * 60 * 1000; // 15 min
+    account.forgetPasswordToken = hashedToken;
+    account.forgetPasswordExpiry = Date.now() + 15 * 60 * 1000;
 
-    await user.save({ validateBeforeSave: false });
+    await account.save({ validateBeforeSave: false });
 
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+    // 🔗 Include role in reset link
+    const resetUrl =
+      `${process.env.FRONTEND_URL}/reset-password/${resetToken}?role=${role}`;
 
-    await sendForgotPasswordEmail(user.email, user.name, resetUrl);
+    await sendForgotPasswordEmail(
+      account.email,
+      account.name || "User",
+      resetUrl
+    );
 
     res.json({
       success: true,
-      message: "Password reset link sent to email",
+      message: "Password reset link sent"
     });
+
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("FORGOT PASSWORD ERROR:", err);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -297,63 +319,49 @@ export const forgotPassword = async (req, res) => {
 export const resetPassword = async (req, res) => {
   try {
     const { token } = req.params;
-    const { newPassword } = req.body;
+    const { password } = req.body;
+    const { role } = req.query;
 
-    if (!newPassword || newPassword.length < 6) {
-      return res
-        .status(400)
-        .json({ message: "Password must be at least 6 characters" });
+    if (!token || !password || !role) {
+      return res.status(400).json({
+        message: "Invalid reset request"
+      });
     }
 
-    // Hash token from URL
     const hashedToken = crypto
       .createHash("sha256")
       .update(token)
       .digest("hex");
 
-    // Find valid reset request
-    const user = await User.findOne({
+    const Model = role === "delivery" ? DeliveryBoy : User;
+
+    const account = await Model.findOne({
       forgetPasswordToken: hashedToken,
-      forgetPasswordExpiry: { $gt: Date.now() },
+      forgetPasswordExpiry: { $gt: Date.now() }
     }).select("+password");
 
-    if (!user) {
-      return res
-        .status(400)
-        .json({ message: "Invalid or expired reset token" });
+    if (!account) {
+      return res.status(400).json({
+        message: "Reset link expired or invalid"
+      });
     }
 
-    // Set new password
-    user.password = await bcrypt.hash(newPassword, 10);
+    // ✅ IMPORTANT FIX — NO MANUAL HASH
+    account.password = password;
 
-    // Clear reset fields
-    user.forgetPasswordToken = undefined;
-    user.forgetPasswordExpiry = undefined;
+    account.forgetPasswordToken = undefined;
+    account.forgetPasswordExpiry = undefined;
 
-    await user.save();
+    await account.save(); // pre("save") hashes ONCE
 
-    // 🔐 AUTO LOGIN (7 DAYS)
-    const jwtToken = generateToken(user._id, user.role);
-
-
-    res.cookie("token", jwtToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
-
-    res.status(200).json({
+    res.json({
       success: true,
-      message: "Password reset successful. Logged in automatically.",
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-      },
+      message: "Password reset successful"
     });
+
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("RESET PASSWORD ERROR:", err);
+    res.status(500).json({ message: "Server error" });
   }
 };
 

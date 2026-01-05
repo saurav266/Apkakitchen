@@ -241,12 +241,22 @@ export default function AdminDeliveryBoyDetails() {
 
 function EditDeliveryBoyModal({ boy, onClose, onUpdated }) {
   const [form, setForm] = useState({
-    name: boy.name,
-    phone: boy.phone,
-    vehicleNumber: boy.vehicleNumber,
-    status: boy.status,
-    currentAddress: boy.currentAddress || {},
-    permanentAddress: boy.permanentAddress || {}
+    name: boy.name || "",
+    phone: boy.phone || "",
+    vehicleNumber: boy.vehicleNumber || "",
+    status: boy.status || "available",
+    currentAddress: boy.currentAddress || {
+      addressLine: "",
+      city: "",
+      state: "",
+      pincode: ""
+    },
+    permanentAddress: boy.permanentAddress || {
+      addressLine: "",
+      city: "",
+      state: "",
+      pincode: ""
+    }
   });
 
   const submit = async () => {
@@ -265,15 +275,20 @@ function EditDeliveryBoyModal({ boy, onClose, onUpdated }) {
   };
 
   const handleAddress = (type, field, value) => {
-    setForm({
-      ...form,
-      [type]: { ...form[type], [field]: value }
-    });
+    setForm(prev => ({
+      ...prev,
+      [type]: {
+        ...prev[type],
+        [field]: value
+      }
+    }));
   };
 
   return (
     <ModalWrapper>
       <h2 className="text-xl font-bold mb-4">Edit Delivery Boy</h2>
+
+      {/* BASIC INFO */}
       {["name", "phone", "vehicleNumber"].map(f => (
         <input
           key={f}
@@ -283,6 +298,7 @@ function EditDeliveryBoyModal({ boy, onClose, onUpdated }) {
           placeholder={f}
         />
       ))}
+
       <select
         value={form.status}
         onChange={e => setForm({ ...form, status: e.target.value })}
@@ -292,17 +308,49 @@ function EditDeliveryBoyModal({ boy, onClose, onUpdated }) {
         <option value="busy">Busy</option>
         <option value="offline">Offline</option>
       </select>
-      <div className="flex gap-3">
-        <button onClick={submit} className="flex-1 bg-orange-600 text-white py-2 rounded">
+
+      {/* CURRENT ADDRESS */}
+      <h3 className="font-semibold mb-2">📍 Current Address</h3>
+      {["addressLine", "city", "state", "pincode"].map(field => (
+        <input
+          key={field}
+          value={form.currentAddress[field]}
+          onChange={e => handleAddress("currentAddress", field, e.target.value)}
+          placeholder={field}
+          className="w-full border p-2 rounded mb-2"
+        />
+      ))}
+
+      {/* PERMANENT ADDRESS */}
+      <h3 className="font-semibold mt-4 mb-2">🏠 Permanent Address</h3>
+      {["addressLine", "city", "state", "pincode"].map(field => (
+        <input
+          key={field}
+          value={form.permanentAddress[field]}
+          onChange={e => handleAddress("permanentAddress", field, e.target.value)}
+          placeholder={field}
+          className="w-full border p-2 rounded mb-2"
+        />
+      ))}
+
+      <div className="flex gap-3 mt-4">
+        <button
+          onClick={submit}
+          className="flex-1 bg-orange-600 text-white py-2 rounded"
+        >
           Save
         </button>
-        <button onClick={onClose} className="flex-1 bg-gray-200 py-2 rounded">
+        <button
+          onClick={onClose}
+          className="flex-1 bg-gray-200 py-2 rounded"
+        >
           Cancel
         </button>
       </div>
     </ModalWrapper>
   );
 }
+
 
 function InfoCard({ title, value }) {
   return (

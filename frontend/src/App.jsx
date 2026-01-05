@@ -23,6 +23,7 @@ const CheckOut = lazy(() => import("./user-page/CheckOut.jsx"));
 const OrderSuccess = lazy(() => import("./user-page/OrderSuccess.jsx"));
 const FoodViewPage = lazy(() => import("./user-page/FoodViewPage.jsx"));
 const OrderView = lazy(() => import("./user-page/OrderView.jsx"));
+const ResetPassword = lazy(() => import("./user-page/ResetPassword.jsx"));
 
 // Admin Pages
 const AdminDashboard = lazy(() => import("./Admin-pages/AdminDashboard.jsx"));
@@ -72,6 +73,7 @@ function App() {
             <Route path="/cart" element={<Cart />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+             <Route path="/reset-password/:token" element={<ResetPassword />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/food/:id" element={<FoodViewPage />} />
