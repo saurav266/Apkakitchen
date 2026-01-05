@@ -243,7 +243,7 @@ const addToCart = () => {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ duration: 0.4 }}
-                className="relative z-10 w-80 h-80 object-contain rounded-2xl cursor-zoom-in hover:scale-110 transition-transform"
+                className="relative z-10 w-130 h-130 object-contain rounded-2xl cursor-zoom-in hover:scale-110 transition-transform"
               />
             </AnimatePresence>
 
@@ -254,7 +254,7 @@ const addToCart = () => {
                   <button
                     key={idx}
                     onClick={() => setActiveImage(idx)}
-                    className={`w-14 h-14 rounded-xl overflow-hidden border-2 ${
+                    className={`w-20 h-20 rounded-xl overflow-hidden border-2 ${
                       idx === activeImage
                         ? "border-orange-500 scale-105"
                         : "border-transparent opacity-70 hover:opacity-100"

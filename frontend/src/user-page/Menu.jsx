@@ -50,6 +50,10 @@ export default function Menu() {
     setCart(c);
   }, []);
 
+  useEffect(() => {
+  console.log("miniOpen:", miniOpen);
+}, [miniOpen]);
+
   /* ================= CART ================= */
   const updateCart = (item, delta) => {
     let c = [...cart];

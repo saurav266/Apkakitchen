@@ -300,6 +300,13 @@ const Navbar = memo(function Navbar() {
                   {item}
                 </NavLink>
               ))}
+              {!user && (     
+                <NavLink
+                  to="/login"
+                  onClick={() => setOpen(false)}
+                >
+                  Login
+                </NavLink>)}
             </div>
           </motion.div>
         )}

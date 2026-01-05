@@ -26,7 +26,7 @@ const DATABASE_URL = "mongodb://127.0.0.1:27017/Apkakitchen"
 //       process.exit();
 //     }
 
-//     const hashedPassword = await bcrypt.hash("Admin@123", 10);
+//     const hashedPassword = await bcrypt.hash("Adminapka@123", 10);
 
 //     const admin = await Admin.create({
 //       name: "Admin",

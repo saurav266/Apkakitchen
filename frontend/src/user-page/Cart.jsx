@@ -4,26 +4,42 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
 export default function CartPage() {
+  const formatPrice = (n) =>
+  Number(n || 0).toFixed(2);
+
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
   const navigate = useNavigate();
 
   // 🔹 Fetch products from backend
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const res = await axios.get("/api/products");
-        setProducts(res.data.products);
-      } catch (err) {
-        console.error("Error fetching products:", err);
-      }
-    };
-    fetchProducts();
+  const fetchProducts = async () => {
+    try {
+      const res = await axios.get("/api/products");
+      setProducts(res.data.products);
+    } catch (err) {
+      console.error("Error fetching products:", err);
+    }
+  };
+  fetchProducts();
 
-    // Load cart from localStorage
-    const c = JSON.parse(localStorage.getItem("cart")) || [];
-    setCart(c);
-  }, []);
+  const c = JSON.parse(localStorage.getItem("cart")) || [];
+
+  const normalized = c.map((item) => ({
+    ...item,
+    image:
+      item.image ||
+      item.images?.find((img) => img.isPrimary)?.url ||
+      item.images?.[0]?.url ||
+      "/placeholder-food.png",
+    finalPrice: Number(item.finalPrice ?? item.price ?? 0),
+    qty: Number(item.qty ?? 1),
+  }));
+
+  setCart(normalized);
+  localStorage.setItem("cart", JSON.stringify(normalized));
+}, []);
+
 
   // 🔹 Add product to cart
 const addToCart = (product) => {
@@ -33,14 +49,23 @@ const addToCart = (product) => {
   const price =
     product.finalPrice ??
     product.sale_price ??
-    product.price;
+    product.price ??
+    0;
+
+  const image =
+    product.images?.find(img => img.isPrimary)?.url ||
+    product.images?.[0]?.url ||
+    "/placeholder-food.png";
 
   if (existing) {
     existing.qty += 1;
   } else {
     c.push({
-      ...product,
-      finalPrice: Number(price), // 🔥 FIX
+      _id: product._id,
+      name: product.name,
+      images: product.images,      // keep original
+      image,                        // ✅ normalized image
+      finalPrice: Number(price),
       qty: 1,
     });
   }
@@ -119,10 +144,11 @@ const addToCart = (product) => {
                 {/* 🍽️ Image */}
                 <div className="w-20 h-20 rounded-xl overflow-hidden bg-orange-50 flex-shrink-0">
                   <img
-                    src={item.image || "/placeholder-food.png"}
+                    src={item.image}
                     alt={item.name}
-                    className="w-full h-full object-contain hover:scale-110 transition"
+                    className="w-full h-full object-cover hover:scale-110 transition"
                   />
+
                 </div>
 
                 {/* 📝 Info */}
@@ -170,7 +196,7 @@ const addToCart = (product) => {
             {/* TOTAL */}
             <div className="flex justify-between items-center mt-6 text-lg font-bold">
               <span>Total</span>
-              <span className="text-orange-600">₹{total}</span>
+              <span className="text-orange-600">₹{formatPrice(total)}</span>
             </div>
 
             {/* ACTIONS */}
