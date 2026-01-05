@@ -23,6 +23,7 @@ const CheckOut = lazy(() => import("./user-page/CheckOut.jsx"));
 const OrderSuccess = lazy(() => import("./user-page/OrderSuccess.jsx"));
 const FoodViewPage = lazy(() => import("./user-page/FoodViewPage.jsx"));
 const OrderView = lazy(() => import("./user-page/OrderView.jsx"));
+const ReviewPage = lazy(() => import("./user-page/ReviewPage.jsx"));
 
 // Admin Pages
 const AdminDashboard = lazy(() => import("./Admin-pages/AdminDashboard.jsx"));
@@ -76,6 +77,7 @@ function App() {
             <Route path="/contact" element={<Contact />} />
             <Route path="/food/:id" element={<FoodViewPage />} />
             <Route path="/order-success" element={<OrderSuccess />} />
+            <Route path="/reviews/:productId" element={<ReviewPage />} />
 
             {/* 🔒 USER PROTECTED */}
             <Route

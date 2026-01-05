@@ -8,7 +8,15 @@ const reviewSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-    
+
+    // 🔥 REQUIRED for duplicate check
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
+
     name: {
       type: String,
       required: true,
@@ -21,28 +29,19 @@ const reviewSchema = new mongoose.Schema(
       max: 5,
     },
 
-    comment: {
-      type: String,
-      trim: true,
-    },
+    comment: String,
 
     verified: {
       type: Boolean,
-      default: false, // ✅ verified order badge
+      default: false,
     },
 
-    images: [
-      {
-        type: String, // Cloudinary URLs (later)
-      },
-    ],
+    images: [String],
   },
-  {
-    timestamps: true, // 👈 enables backdated reviews
-  }
+  { timestamps: true }
 );
 
+// 🔒 One review per user per product
 reviewSchema.index({ product: 1, user: 1 }, { unique: true });
-
 
 export default mongoose.model("Review", reviewSchema);

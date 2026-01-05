@@ -26,18 +26,29 @@ export default function CartPage() {
   }, []);
 
   // 🔹 Add product to cart
-  const addToCart = (product) => {
-    let c = [...cart];
-    const existing = c.find((i) => i._id === product._id);
-    if (existing) {
-      existing.qty += 1;
-    } else {
-      c.push({ ...product, qty: 1 });
-    }
-    setCart(c);
-    localStorage.setItem("cart", JSON.stringify(c));
-    window.dispatchEvent(new Event("cartUpdated"));
-  };
+const addToCart = (product) => {
+  let c = [...cart];
+  const existing = c.find((i) => i._id === product._id);
+
+  const price =
+    product.finalPrice ??
+    product.sale_price ??
+    product.price;
+
+  if (existing) {
+    existing.qty += 1;
+  } else {
+    c.push({
+      ...product,
+      finalPrice: Number(price), // 🔥 FIX
+      qty: 1,
+    });
+  }
+
+  setCart(c);
+  localStorage.setItem("cart", JSON.stringify(c));
+  window.dispatchEvent(new Event("cartUpdated"));
+};
 
   // 🔹 Update quantity
   const updateQty = (id, delta) => {
@@ -72,7 +83,11 @@ export default function CartPage() {
     }
   };
 
-  const total = cart.reduce((sum, i) => sum + i.finalPrice * i.qty, 0);
+ const total = cart.reduce(
+  (sum, i) => sum + Number(i.finalPrice ?? i.price ?? 0) * Number(i.qty ?? 1),
+  0
+);
+
 
   return (
     <section className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-red-50 pt-28 pb-20">
@@ -113,7 +128,10 @@ export default function CartPage() {
                 {/* 📝 Info */}
                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-800">{item.name}</h3>
-                  <p className="text-sm text-gray-500">₹{item.finalPrice} each</p>
+                 <p className="text-sm text-gray-500">
+  ₹{item.finalPrice ?? item.price} each
+</p>
+
                 </div>
 
                 {/* 🔢 Qty + Price + Remove */}
@@ -135,8 +153,9 @@ export default function CartPage() {
                   </div>
 
                   <span className="w-20 text-right font-semibold text-gray-800">
-                    ₹{item.finalPrice * item.qty}
-                  </span>
+  ₹{(item.finalPrice ?? item.price ?? 0) * item.qty}
+</span>
+
 
                   <button
                     onClick={() => removeItem(item._id)}

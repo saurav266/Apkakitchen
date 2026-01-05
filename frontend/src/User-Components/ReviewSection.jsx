@@ -23,14 +23,14 @@ export default function Reviews({ productId }) {
     if (res.data.success) setReviews(res.data.reviews);
   };
 
-  /* 📊 Fetch rating stats */
-  const fetchStats = async () => {
-    const res = await axios.get(`${API}/api/reviews/${productId}/stats`);
-    if (res.data.success) {
-      setDistribution(res.data.distribution);
-      setTotalStats(res.data.total);
-    }
-  };
+  // /* 📊 Fetch rating stats */
+  // const fetchStats = async () => {
+  //   const res = await axios.get(`${API}/api/reviews/${productId}/stats`);
+  //   if (res.data.success) {
+  //     setDistribution(res.data.distribution);
+  //     setTotalStats(res.data.total);
+  //   }
+  // };
 
   /* 🔐 Check purchase */
   const checkCanReview = async () => {
@@ -44,7 +44,7 @@ export default function Reviews({ productId }) {
 
   useEffect(() => {
     fetchReviews();
-    fetchStats();
+    // fetchStats();
     checkCanReview();
   }, [productId]);
 
@@ -76,7 +76,7 @@ export default function Reviews({ productId }) {
       </h3>
 
       {/* ⭐ Rating Distribution */}
-      {totalStats > 0 && (
+      {/* {totalStats > 0 && (
         <div className="bg-white/80 rounded-2xl shadow p-6 mb-12">
           {[5,4,3,2,1].map((star) => (
             <div key={star} className="flex items-center gap-4 mb-2">
@@ -91,7 +91,7 @@ export default function Reviews({ productId }) {
             </div>
           ))}
         </div>
-      )}
+      )} */}
 
       {/* ✍️ Review Form */}
       {user && canReview && (
@@ -129,11 +129,11 @@ export default function Reviews({ productId }) {
       )}
 
       {/* 🛒 Purchase to Review */}
-      {totalStats !== null && totalStats > 0 && (
+      {/* {totalStats !== null && totalStats > 0 && (
         <div className="mb-10 text-sm text-gray-600 italic">
           Purchase & receive this item to add a review.
         </div>
-      )}
+      )} */}
 
       {/* 📝 Reviews List */}
       <div className="space-y-5">

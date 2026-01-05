@@ -14,14 +14,19 @@ export default function MiniCart({ open, onClose }) {
   }, []);
 
   // 🔹 Sync cart when updated elsewhere
-  useEffect(() => {
-    const handleUpdate = () => {
-      const c = JSON.parse(localStorage.getItem("cart")) || [];
-      setCart(c);
-    };
-    window.addEventListener("cartUpdated", handleUpdate);
-    return () => window.removeEventListener("cartUpdated", handleUpdate);
-  }, []);
+useEffect(() => {
+  const c = JSON.parse(localStorage.getItem("cart")) || [];
+
+  const fixed = c.map((i) => ({
+    ...i,
+    finalPrice: Number(i.finalPrice ?? i.price ?? 0),
+    qty: Number(i.qty ?? 1),
+  }));
+
+  setCart(fixed);
+  localStorage.setItem("cart", JSON.stringify(fixed));
+}, []);
+
 
   // 🔹 Remove item
   const removeItem = (id) => {
@@ -32,20 +37,26 @@ export default function MiniCart({ open, onClose }) {
   };
 
   // 🔹 Update quantity
-  const updateQty = (id, delta) => {
-    let c = [...cart];
-    const item = c.find((i) => i._id === id);
-    if (!item) return;
+const updateQty = (id, delta) => {
+  let c = [...cart];
+  const item = c.find((i) => i._id === id);
+  if (!item) return;
 
-    item.qty += delta;
-    c = c.filter((i) => i.qty > 0);
+  item.qty = Number(item.qty ?? 1) + delta;
+  c = c.filter((i) => i.qty > 0);
 
-    setCart(c);
-    localStorage.setItem("cart", JSON.stringify(c));
-    window.dispatchEvent(new Event("cartUpdated"));
-  };
+  setCart(c);
+  localStorage.setItem("cart", JSON.stringify(c));
+  window.dispatchEvent(new Event("cartUpdated"));
+};
 
-  const total = cart.reduce((sum, i) => sum + i.finalPrice * i.qty, 0);
+
+const total = cart.reduce(
+  (sum, i) =>
+    sum + Number(i.finalPrice ?? i.price ?? 0) * Number(i.qty ?? 1),
+  0
+);
+
 
   return (
     <AnimatePresence>
@@ -93,9 +104,9 @@ export default function MiniCart({ open, onClose }) {
                   </div>
 
                   {/* Price */}
-                  <p className="text-sm font-semibold">
-                    ₹{item.finalPrice * item.qty}
-                  </p>
+                 <p className="text-sm font-semibold">
+  ₹{(item.finalPrice ?? item.price ?? 0) * item.qty}
+</p>
 
                   {/* Remove */}
                   <button

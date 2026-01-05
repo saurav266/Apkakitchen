@@ -12,6 +12,8 @@ const categories = [
   { id: "biryani", name: "Biryani" },
   { id: "chinese", name: "Chinese" },
   { id: "indian", name: "Indian" },
+  { id: "desserts", name: "Desserts" },
+  { id: "party-combo", name: "Party Combo" },
 ];
 
 export default function Menu() {
@@ -36,6 +38,11 @@ export default function Menu() {
       console.error("Failed to fetch menu", err);
     }
   };
+  const getImage = (item) =>
+  item.images?.find((img) => img.isPrimary)?.url ||
+  item.images?.[0]?.url ||
+  "/placeholder-food.png";
+
 
   useEffect(() => {
     fetchMenu();
@@ -185,7 +192,7 @@ export default function Menu() {
                   `}
                 >
                   {/* Image */}
-                  <div className="h-48bg-orange-50 flex items-center justify-center overflow-hidden relative">
+                  <div className="h-48 bg-orange-50 flex items-center justify-center overflow-hidden relative">
                     <span
                       className={`
                         absolute top-3 right-3 text-xs font-semibold px-2 py-1 rounded-full z-10
@@ -196,12 +203,13 @@ export default function Menu() {
                     </span>
 
                     <motion.img
-                      src={item.image}
+                      src={getImage(item)}
                       alt={item.name}
-                      className="h-48 w-full scale-134 object-contain"
+                      className="h-48 w-full object-cover"
                       whileHover={{ scale: 1.15 }}
                       transition={{ duration: 0.4 }}
                     />
+
                   </div>
 
                   {/* Content */}

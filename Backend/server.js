@@ -44,7 +44,8 @@ import orderRoute from "./route/orderRoute.js";
 import productRoute from "./route/productRoute.js";
 import contactRoutes from "./route/contactRoute.js"
 import paymentRoute from "./route/paymentRoute.js"
-import reviewRoutes from "./route/reviewRoute.js"
+import reviewRoutes from "./route/reviewRoute.js";
+
 app.use("/api/users", UserRoute);
 app.use("/api/delivery", DeliveryBoyRoute);
 app.use("/api/admin", AdminRoute);
