@@ -176,7 +176,7 @@ const placeOrder = async () => {
       );
 
       localStorage.removeItem("cart");
-      navigate("/orders/success");
+      navigate("/order-success");
     } catch (err) {
       alert(err.response?.data?.message || "Order failed");
     } finally {
@@ -240,7 +240,7 @@ const placeOrder = async () => {
           );
 
           localStorage.removeItem("cart");
-          navigate("/orders/success");
+          navigate("/order-success");
 
         } catch {
           alert("Payment verification failed. Amount will be refunded.");
