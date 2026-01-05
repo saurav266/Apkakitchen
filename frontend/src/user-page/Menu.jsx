@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import MiniCart from "../User-Components/MiniCart.jsx";
 import axios from "axios";
 
-const API = "http://localhost:3000";
+const API = "";
 
 const categories = [
   { id: "all", name: "All" },

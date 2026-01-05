@@ -22,7 +22,7 @@ import {
 } from "recharts";
 import { socket } from "../socket";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const API =  "";
 const FILTERS = ["day", "week", "month", "year"];
 
 const AdminDashboard = memo(function AdminDashboard() {

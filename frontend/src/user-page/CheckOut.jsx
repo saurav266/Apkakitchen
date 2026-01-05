@@ -5,7 +5,7 @@ import { MapPin, Phone, CreditCard, Banknote } from "lucide-react";
 import axios from "axios";
 import '../utils/fixLeafletIcon.js';
 
-const API =import.meta.env.VITE_API_URL || "http://localhost:3000";
+const API ="";
 
 const loadRazorpay = () => {
   return new Promise((resolve) => {

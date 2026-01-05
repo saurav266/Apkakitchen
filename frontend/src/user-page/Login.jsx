@@ -26,7 +26,7 @@ const [forgotLoading, setForgotLoading] = useState(false);
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:3000/api/auth/login", {
+      const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -76,7 +76,7 @@ const [forgotLoading, setForgotLoading] = useState(false);
     setForgotLoading(true);
 
     const res = await fetch(
-      "http://localhost:3000/api/auth/forgot-password",
+      "/api/auth/forgot-password",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

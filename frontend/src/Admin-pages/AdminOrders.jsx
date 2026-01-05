@@ -4,7 +4,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
 import { socket } from "../socket";
-const API = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const API = "";
 
 const statusStyles = {
   placed: "bg-blue-100 text-blue-700",

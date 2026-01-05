@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { ArrowLeft, Edit, Trash2 } from "lucide-react";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const API = import.meta.env.VITE_API_URL || "";
 
 /* ======================================================
    MAIN COMPONENT

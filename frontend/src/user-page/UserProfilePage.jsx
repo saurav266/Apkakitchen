@@ -33,7 +33,7 @@ export default function UserProfile() {
 
   useEffect(() => {
     axios
-      .get("http://localhost:3000/api/users/profile", {
+      .get("/api/users/profile", {
         withCredentials: true
       })
       .then(res => {

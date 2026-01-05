@@ -24,7 +24,7 @@ export default function AdminDeliveryManagement() {
   const fetchDeliveryBoys = async () => {
     try {
       const { data } = await axios.get(
-        "http://localhost:3000/api/admin/delivery-boys",
+        "/api/admin/delivery-boys",
         { withCredentials: true }
       );
       setBoys(data.deliveryBoys || []);
@@ -40,7 +40,7 @@ export default function AdminDeliveryManagement() {
   const addDeliveryBoy = async (form) => {
     try {
       const { data } = await axios.post(
-        "http://localhost:3000/api/admin/Add-delivery-boy",
+        "/api/admin/Add-delivery-boy",
         form,
         { withCredentials: true }
       );

@@ -14,7 +14,7 @@ import { socket } from "../socket";
 import LiveDeliveryMap from "../User-Components/LiveDeliveryMap.jsx";
 
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const API ="";
 
 const STATUS_FLOW = [
   "placed",

@@ -3,7 +3,7 @@ import { Plus, Pencil, Trash2, Image as ImageIcon, Upload } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import { toast } from "react-hot-toast";
-const API_URL = "http://localhost:3000";
+const API_URL = "";
 const CATEGORY_OPTIONS = [
   "thali",
   "biryani",

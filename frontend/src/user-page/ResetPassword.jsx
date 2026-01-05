@@ -30,7 +30,7 @@ export default function ResetPassword() {
       setLoading(true);
 
       const res = await fetch(
-        `http://localhost:3000/api/auth/reset-password/${token}?role=${role}`,
+        `/api/auth/reset-password/${token}?role=${role}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

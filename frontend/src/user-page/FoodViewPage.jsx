@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import Reviews from "../User-Components/ReviewSection.jsx";
 
-const API = "http://localhost:3000";
+const API = "";
 const AUTO_SLIDE_INTERVAL = 4000; // 4 sec
 
 export default function FoodViewPage() {

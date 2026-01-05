@@ -5,7 +5,7 @@ import axios from "axios";
 import { Package } from "lucide-react";
 import { useTheme } from "../context/Themecontext.jsx";
 
-const API = "http://localhost:3000";
+const API = "";
 
 const formatDate = (date) =>
   new Date(date).toLocaleDateString("en-IN", {

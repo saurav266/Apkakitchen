@@ -21,7 +21,7 @@ export default function EditProfilePage() {
   const fetchProfile = async () => {
     try {
       const res = await axios.get(
-        "http://localhost:3000/api/users/profile",
+        "/api/users/profile",
         { withCredentials: true }
       );
 
@@ -46,7 +46,7 @@ export default function EditProfilePage() {
   const updateProfile = async () => {
     try {
       await axios.put(
-        "http://localhost:3000/api/users/profile",
+        "/api/users/profile",
         form,
         { withCredentials: true }
       );
@@ -61,7 +61,7 @@ export default function EditProfilePage() {
   const addAddress = async () => {
     try {
       await axios.post(
-        "http://localhost:3000/api/users/address",
+        "/api/users/address",
         newAddress,
         { withCredentials: true }
       );
@@ -85,7 +85,7 @@ export default function EditProfilePage() {
     if (!confirm("Delete this address?")) return;
 
     await axios.delete(
-      `http://localhost:3000/api/users/address/${id}`,
+      `/api/users/address/${id}`,
       { withCredentials: true }
     );
     fetchProfile();
@@ -94,7 +94,7 @@ export default function EditProfilePage() {
   const setCurrentAddress = async (id) => {
     try {
       await axios.patch(
-        `http://localhost:3000/api/users/address/${id}/set-current`,
+        `/api/users/address/${id}/set-current`,
         {},
         { withCredentials: true }
       );

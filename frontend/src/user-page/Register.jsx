@@ -44,7 +44,7 @@ export default function Register() {
     setLoading(true);
     try {
       const res = await axios.post(
-        "http://localhost:3000/api/auth/register",
+        "/api/auth/register",
         { name, email, password },
         { withCredentials: true }
       );
@@ -68,7 +68,7 @@ export default function Register() {
 
     try {
       const res = await axios.post(
-        "http://localhost:3000/api/auth/verify-otp",
+        "/api/auth/verify-otp",
         { otp, otpToken },
         { withCredentials: true }
       );
@@ -89,7 +89,7 @@ export default function Register() {
     setError("");
     try {
       const res = await axios.post(
-        "http://localhost:3000/api/auth/resend-otp",
+        "/api/auth/resend-otp",
         { otpToken },
         { withCredentials: true }
       );

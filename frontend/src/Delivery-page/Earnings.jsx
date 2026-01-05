@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "../context/Themecontext.jsx";
 
-const API = "http://localhost:3000";
+const API = "";
 
 export default function DeliveryOrders() {
   const { dark } = useTheme();

@@ -28,7 +28,7 @@ export default function AdminUsers() {
     try {
       setLoading(true);
       const res = await fetch(
-        "http://localhost:3000/api/admin/all-users",
+        "/api/admin/all-users",
         { credentials: "include" }
       );
       const data = await res.json();
@@ -89,14 +89,14 @@ export default function AdminUsers() {
     try {
       if (confirm.type === "block") {
         await fetch(
-          `http://localhost:3000/api/admin/users/${confirm.user._id}/toggle`,
+          `/api/admin/users/${confirm.user._id}/toggle`,
           { method: "PATCH", credentials: "include" }
         );
       }
 
       if (confirm.type === "delete") {
         await fetch(
-          `http://localhost:3000/api/admin/users/${confirm.user._id}`,
+          `/api/admin/users/${confirm.user._id}`,
           { method: "DELETE", credentials: "include" }
         );
       }

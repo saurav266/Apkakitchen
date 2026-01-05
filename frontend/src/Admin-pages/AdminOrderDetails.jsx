@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { ArrowLeft, Save } from "lucide-react";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const API = "";
 
 export default function AdminOrderDetails() {
   const { id } = useParams();

@@ -2,7 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const API = "";
 
 export default function ReviewPage() {
   const { productId } = useParams();

@@ -5,7 +5,7 @@ import { socket } from "../socket";
 import { useTheme } from "../context/Themecontext.jsx";
 import { Bell, Power } from "lucide-react";
 
-const API = "http://localhost:3000";
+const API = "";
 
 export default function DeliveryDashboard() {
   const { dark } = useTheme();

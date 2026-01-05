@@ -4,7 +4,7 @@ import { useState } from "react";
 import axios from "axios";
 import Footer from "../User-Components/Footer.jsx";
 
-const API = "http://localhost:3000/api/contact"; 
+const API = "/api/contact"; 
 // 👉 in production change to https://apkakitchen.com/api/contact
 
 export default function Contact() {

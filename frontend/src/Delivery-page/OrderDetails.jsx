@@ -4,7 +4,7 @@ import axios from "axios";
 import { ArrowLeft, CheckCircle } from "lucide-react";
 import { useTheme } from "../context/Themecontext.jsx";
 
-const API = "http://localhost:3000";
+const API = "";
 const formatDateTime = (date) =>
   new Date(date).toLocaleString("en-IN", {
     dateStyle: "medium",

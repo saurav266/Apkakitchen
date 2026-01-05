@@ -15,7 +15,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../context/Themecontext.jsx";
 
-const API = "http://localhost:3000";
+const API = "";
 
 export default function DeliveryProfile() {
   const navigate = useNavigate();
