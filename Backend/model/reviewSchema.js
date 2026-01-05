@@ -22,6 +22,14 @@ const reviewSchema = new mongoose.Schema(
       required: true
     },
 
+    // 🔥 REQUIRED for duplicate check
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
+
     name: {
       type: String,
       required: true // snapshot of user name
@@ -34,28 +42,19 @@ const reviewSchema = new mongoose.Schema(
       max: 5
     },
 
-    comment: {
-      type: String,
-      trim: true
-    },
+    comment: String,
 
     verified: {
       type: Boolean,
-      default: false // set true after delivery check
+      default: false,
     },
 
-    images: [
-      {
-        type: String // Cloudinary URLs
-      }
-    ]
+    images: [String],
   },
-  {
-    timestamps: true
-  }
+  { timestamps: true }
 );
 
-/* ✅ Prevent duplicate review by same user for same product */
+// 🔒 One review per user per product
 reviewSchema.index({ product: 1, user: 1 }, { unique: true });
 
 export default mongoose.model("Review", reviewSchema);

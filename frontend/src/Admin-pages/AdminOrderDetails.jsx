@@ -160,25 +160,26 @@ export default function AdminOrderDetails() {
       <div className="bg-white p-5 rounded-xl shadow mb-6">
         <h3 className="font-semibold mb-4">Items</h3>
 
-        {order.items.map((item, i) => (
-          <div
-            key={i}
-            className="flex justify-between items-center border-b py-2"
-          >
-            <span>{item.name}</span>
+       {order.items.map((item, i) => (
+  <div
+    key={i}
+    className="flex justify-between items-center border-b py-2"
+  >
+    <span>{item.name}</span>
 
-            <input
-              type="number"
-              value={item.qty}
-              min="1"
-              onChange={(e) => updateQty(i, +e.target.value)}
-              disabled={refundInProgress}
-              className="w-16 border rounded px-2 py-1"
-            />
+    <input
+      type="number"
+      value={item.quantity}
+      min="1"
+      onChange={(e) => updateQty(i, Number(e.target.value))}
+      disabled={refundInProgress}
+      className="w-16 border rounded px-2 py-1"
+    />
 
-            <span>₹{item.price * item.qty}</span>
-          </div>
-        ))}
+    <span>₹{item.price * item.quantity}</span>
+  </div>
+))}
+
 
         <button
           onClick={saveEditedOrder}

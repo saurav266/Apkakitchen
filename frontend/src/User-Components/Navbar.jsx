@@ -306,6 +306,7 @@ const Navbar = memo(function Navbar() {
       </AnimatePresence>
     </header>
   );
-});
+}
 
+);
 export default Navbar;

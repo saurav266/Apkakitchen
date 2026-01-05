@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { motion } from "framer-motion";
 import {
@@ -13,6 +13,7 @@ import {
 import { socket } from "../socket";
 import LiveDeliveryMap from "../User-Components/LiveDeliveryMap.jsx";
 
+
 const API = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 const STATUS_FLOW = [
@@ -25,9 +26,12 @@ const STATUS_FLOW = [
 
 export default function OrderView() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [liveLocation, setLiveLocation] = useState(null);
+  const [reviewMap, setReviewMap] = useState({});
+
 
   // refund
 
@@ -79,18 +83,55 @@ const handleCancelOrder = async () => {
 };
 
   /* ================= FETCH ORDER ================= */
-  const fetchOrder = async () => {
-    const { data } = await axios.get(
-      `${API}/api/users/order/${id}`,
-      { withCredentials: true }
-    );
-    setOrder(data.order);
-    setLoading(false);
-  };
+ const fetchOrder = async () => {
+  const { data } = await axios.get(
+    `${API}/api/users/order/${id}`,
+    { withCredentials: true }
+  );
 
-  useEffect(() => {
-    fetchOrder();
-  }, [id]);
+  setOrder(data.order);
+  await fetchReviewStatus(data.order.items);
+  setLoading(false);
+};
+useEffect(() => {
+  fetchOrder();
+}, [id]);
+
+const getProductId = (item) => {
+  if (!item?.productId) return null;
+  return typeof item.productId === "string"
+    ? item.productId
+    : item.productId._id;
+};
+
+const fetchReviewStatus = async (items) => {
+  const uniqueProductIds = [
+    ...new Set(
+      items.map(getProductId).filter(Boolean)
+    )
+  ];
+
+  const map = {};
+
+  await Promise.all(
+    uniqueProductIds.map(async (productId) => {
+      try {
+        const { data } = await axios.get(
+          `${API}/api/reviews/my/${productId}`,
+          { withCredentials: true }
+        );
+        map[productId] = !!data.review;
+      } catch {
+        map[productId] = false;
+      }
+    })
+  );
+
+  setReviewMap(map);
+};
+
+
+
 
   /* ================= SOCKET EVENTS ================= */
 useEffect(() => {
@@ -124,7 +165,7 @@ useEffect(() => {
   const statusIndex = STATUS_FLOW.indexOf(order.orderStatus);
 
   return (
-    <div className="min-h-screen bg-orange-50 p-6 max-w-3xl mx-auto">
+    <div className="min-h-screen bg-orange-50 p-6 max-w-3xl mx-auto pt-30">
 
       {/* HEADER */}
       <motion.div
@@ -257,23 +298,89 @@ useEffect(() => {
 
 
       {/* ITEMS */}
-      <div className="bg-white rounded-2xl p-5 shadow">
-        <h3 className="font-semibold mb-3 flex items-center gap-2">
-          <Package className="w-5 h-5 text-orange-600" />
-          Items
-        </h3>
+    <div className="bg-white rounded-2xl p-5 shadow">
+      <h3 className="font-semibold mb-3 flex items-center gap-2">
+        <Package className="w-5 h-5 text-orange-600" />
+        Items
+      </h3>
 
-        {order.items.map((i, idx) => (
-          <div key={idx} className="flex justify-between border-b py-2">
-            <span>{i.name} × {i.quantity}</span>
-            <span>₹{i.price * i.quantity}</span>
+      {order.items.map((i, idx) => (
+        <div
+          key={idx}
+          className="flex justify-between items-center border-b py-3"
+        >
+          <div>
+            <p className="font-medium">
+              {i.name} × {i.quantity}
+            </p>
+            <p className="text-sm text-gray-500">
+              ₹{i.price} each
+            </p>
+
+            {/* ⭐ REVIEW BUTTON */}
+{order.orderStatus === "delivered" && order.items.map((item, idx) => {
+  const productId =
+    typeof item.productId === "string"
+      ? item.productId
+      : item.productId?._id;
+
+  if (!productId) return null;
+
+  const reviewed = reviewMap[productId];
+
+  return (
+    <div key={productId} className="mt-2">
+      {reviewed ? (
+        <div className="flex gap-3">
+          <button
+            onClick={() => navigate(`/reviews/${productId}`)}
+            className="text-sm text-blue-600 font-semibold"
+          >
+            Edit Review
+          </button>
+
+          <button
+            onClick={async () => {
+              await axios.delete(
+                `${API}/api/reviews/${productId}`,
+                { withCredentials: true }
+              );
+              fetchOrder();
+            }}
+            className="text-sm text-red-600 font-semibold"
+          >
+            Delete
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => navigate(`/reviews/${productId}`)}
+          className="text-sm text-orange-600 font-semibold"
+        >
+          Write Review
+        </button>
+      )}
+    </div>
+  );
+})}
+
+
+
+
+
+
           </div>
-        ))}
 
-        <p className="text-right font-bold mt-3">
-          Total ₹{order.totalAmount}
-        </p>
-      </div>
+          <span className="font-semibold">
+            ₹{i.price * i.quantity}
+          </span>
+        </div>
+      ))}
+
+      <p className="text-right font-bold mt-4 text-lg">
+        Total ₹{order.totalAmount}
+      </p>
+    </div>
     </div>
   );
 }

@@ -12,6 +12,8 @@ const categories = [
   { id: "biryani", name: "Biryani" },
   { id: "chinese", name: "Chinese" },
   { id: "indian", name: "Indian" },
+  { id: "desserts", name: "Desserts" },
+  { id: "party-combo", name: "Party Combo" },
 ];
 
 export default function Menu() {
@@ -36,6 +38,11 @@ export default function Menu() {
       console.error("Failed to fetch menu", err);
     }
   };
+  const getImage = (item) =>
+  item.images?.find((img) => img.isPrimary)?.url ||
+  item.images?.[0]?.url ||
+  "/placeholder-food.png";
+
 
   useEffect(() => {
     fetchMenu();
@@ -118,7 +125,7 @@ export default function Menu() {
                 key={t}
                 onClick={() => setFoodType(t)}
                 className={`
-                  px-5 py-2 rounded-full text-sm font-medium transition
+                  px-5 py-2 rounded-full text-sm font-medium transition 
                   ${
                     foodType === t
                       ? t === "veg"
@@ -180,7 +187,7 @@ export default function Menu() {
                   onClick={() => navigate(`/food/${item._id}`)}
                   className={`
                     bg-white/90 rounded-2xl shadow-lg overflow-hidden flex flex-col
-                    border-2 cursor-pointer
+                    border-2 cursor-pointer 
                     ${isVeg ? "border-green-200" : "border-red-200"}
                   `}
                 >
@@ -188,7 +195,7 @@ export default function Menu() {
                   <div className="h-48 bg-orange-50 flex items-center justify-center overflow-hidden relative">
                     <span
                       className={`
-                        absolute top-3 right-3 text-xs font-semibold px-2 py-1 rounded-full
+                        absolute top-3 right-3 text-xs font-semibold px-2 py-1 rounded-full z-10
                         ${isVeg ? "bg-green-500 text-white" : "bg-red-500 text-white"}
                       `}
                     >
@@ -196,12 +203,13 @@ export default function Menu() {
                     </span>
 
                     <motion.img
-                      src={item.image}
+                      src={getImage(item)}
                       alt={item.name}
-                      className="h-40 object-contain"
+                      className="h-48 w-full object-cover"
                       whileHover={{ scale: 1.15 }}
                       transition={{ duration: 0.4 }}
                     />
+
                   </div>
 
                   {/* Content */}

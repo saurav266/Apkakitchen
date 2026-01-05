@@ -3,15 +3,16 @@ import { Plus, Pencil, Trash2, Image as ImageIcon, Upload } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import { toast } from "react-hot-toast";
-const BACKED_URl="http://localhost:3000"
+const API_URL = "http://localhost:3000";
 const CATEGORY_OPTIONS = [
-  "veg",
-  "non-veg",
   "thali",
-  "briyani",
+  "biryani",
   "chinese",
   "indian",
+  "desserts",
+  "party-combo",
 ];
+
 
 export default function AdminProducts() {
   const [products, setProducts] = useState([]);
@@ -25,7 +26,7 @@ export default function AdminProducts() {
 
   const fetchProducts = async () => {
     try {
-      const { data } = await axios.get(`${BACKED_URl}/api/products`, {
+      const { data } = await axios.get(`${API_URL}/api/products`, {
         withCredentials: true,
       });
       if (data.success) setProducts(data.products);
@@ -42,15 +43,19 @@ export default function AdminProducts() {
 
   const emptyForm = {
     name: "",
-    category: "veg",
+    category: "indian",
     foodType: "veg",
     price: "",
     mrp: "",
-    image: "",
+    image: "",              // keep for backward compatibility
+    images: [],             // ✅ NEW
+    variants: [],           // ✅ NEW
+    comboItems: [],         // ✅ NEW (party-combo)
     desc: "",
     preparationTime: 15,
     isAvailable: true,
   };
+
 
   const [form, setForm] = useState(emptyForm);
 
@@ -70,55 +75,97 @@ export default function AdminProducts() {
 
   const openEdit = (item) => {
     setEditItem(item);
+
+    const primaryImage =
+      item.images?.find((i) => i.isPrimary)?.url ||
+      item.images?.[0]?.url ||
+      item.image ||
+      "";
+
     setForm({
       name: item.name,
       category: item.category,
       foodType: item.foodType,
       price: item.finalPrice || item.price,
       mrp: item.price,
-      image: item.image,
+      image: primaryImage,          // keep old preview
+      images: item.images || [],    // ✅ NEW
+      variants: item.variants || [],// ✅ NEW
+      comboItems: item.comboItems || [], // ✅ NEW
       desc: item.description || "",
       preparationTime: item.preparationTime || 15,
       isAvailable: item.isAvailable,
     });
+
     setOpen(true);
   };
 
+
   const handleSave = async () => {
-  if (!form.name || !form.category || !form.price || !form.image) {
-    toast.error("Please fill all required fields");
-    return;
-  }
+   const hasVariants = form.variants.length > 0;
 
-  const discountPercentage =
-    form.mrp && Number(form.mrp) > Number(form.price)
-      ? Math.round(
-          ((Number(form.mrp) - Number(form.price)) / Number(form.mrp)) * 100
-        )
-      : 0;
+if (
+  !form.name ||
+  !form.category ||
+  (!hasVariants && !form.price) ||
+  (!form.image && form.images.length === 0)
+) {
+  toast.error("Please fill all required fields");
+  return;
+}
 
-  const payload = {
-    name: form.name,
-    category: form.category,
-    description: form.desc,
-    price: Number(form.price),
-    discountPercentage,
-    image: form.image,
-    foodType: form.foodType,
-    preparationTime: Number(form.preparationTime),
-    isAvailable: form.isAvailable,
-  };
+
+
+const discountPercentage =
+  !hasVariants && form.mrp && Number(form.mrp) > Number(form.price)
+    ? Math.round(
+        ((Number(form.mrp) - Number(form.price)) / Number(form.mrp)) * 100
+      )
+    : 0;
+
+const payload = {
+  name: form.name,
+  category: form.category,
+  description: form.desc,
+
+  // 🔥 CRITICAL FIX
+  hasVariants,
+  price: hasVariants ? 0 : Number(form.price),
+  discountPercentage: hasVariants ? 0 : discountPercentage,
+
+  foodType: form.foodType,
+  preparationTime: Number(form.preparationTime),
+  isAvailable: form.isAvailable,
+
+  images: form.images.length
+    ? form.images
+    : [{ url: form.image, isPrimary: true }],
+
+  variants: hasVariants
+    ? form.variants.map((v, i) => ({
+        name: v.name,
+        price: Number(v.price),
+        discountPercentage: 0,
+        isDefault: i === 0,
+      }))
+    : [],
+
+  comboItems:
+    form.category === "party-combo" ? form.comboItems : [],
+};
+
+
 
   console.log("Saving payload:", payload);
 
   try {
     if (editItem) {
-      await axios.put(`${BACKED_URl}/api/products/${editItem._id}`, payload, {
+      await axios.put(`${API_URL}/api/products/${editItem._id}`, payload, {
         withCredentials: true,
       });
       toast.success("Product updated 🎉");
     } else {
-      await axios.post(`/api/products/add`, payload, {
+      await axios.post(`${API_URL}/api/products/add`, payload, {
         withCredentials: true,
       });
       toast.success("Product added 🍽️");
@@ -136,7 +183,7 @@ export default function AdminProducts() {
 
   const handleDelete = async (id) => {
     if (confirm("Delete this product?")) {
-      await axios.delete(`${BACKED_URl}/api/products/${id}`, {
+      await axios.delete(`${API_URL}/api/products/${id}`, {
         withCredentials: true,
       });
       fetchProducts();
@@ -156,7 +203,7 @@ export default function AdminProducts() {
       }
 
       await axios.post(
-        "${BACKED_URl}/api/products/bulk",
+        `${API_URL}/api/products/bulk`,
         { products: list },
         { withCredentials: true }
       );
@@ -213,76 +260,83 @@ export default function AdminProducts() {
       </tr>
     </thead>
     <tbody>
-      {filtered.map((item) => (
-        <tr key={item._id} className="border-t hover:bg-orange-50/50">
-          {/* Image */}
-          <td className="p-4">
-            {item.image ? (
-              <img
-                src={item.image}
-                alt={item.name}
-                className="w-14 h-14 rounded-xl object-cover"
-              />
-            ) : (
-              <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center">
-                <ImageIcon className="w-5 h-5 text-gray-400" />
-              </div>
-            )}
-          </td>
+  {filtered.map((item) => {
+    const tableImage =
+      item.images?.find((i) => i.isPrimary)?.url ||
+      item.images?.[0]?.url ||
+      item.image;
 
-          {/* Name */}
-          <td className="font-medium">{item.name}</td>
-
-          {/* Category */}
-          <td>{item.category}</td>
-
-          {/* Type */}
-          <td>
-            <span
-              className={`px-2 py-1 rounded-full text-xs ${
-                item.foodType === "veg"
-                  ? "bg-green-100 text-green-700"
-                  : "bg-red-100 text-red-700"
-              }`}
-            >
-              {item.foodType}
-            </span>
-          </td>
-
-          {/* Price */}
-          <td>₹{item.finalPrice || item.price}</td>
-
-          {/* MRP */}
-          <td className="line-through text-gray-400">₹{item.price}</td>
-
-          {/* Description */}
-          <td className="max-w-xs truncate text-gray-600">
-            {item.description}
-          </td>
-
-          {/* Actions */}
-          <td className="pr-6">
-            <div className="flex justify-end gap-3">
-              <button onClick={() => openEdit(item)}>
-                <Pencil className="w-4 h-4 text-blue-600" />
-              </button>
-              <button onClick={() => handleDelete(item._id)}>
-                <Trash2 className="w-4 h-4 text-red-600" />
-              </button>
+    return (
+      <tr key={item._id} className="border-t hover:bg-orange-50/50">
+        {/* Image */}
+        <td className="p-4">
+          {tableImage ? (
+            <img
+              src={tableImage}
+              alt={item.name}
+              className="w-14 h-14 rounded-xl object-cover"
+            />
+          ) : (
+            <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center">
+              <ImageIcon className="w-5 h-5 text-gray-400" />
             </div>
-          </td>
-        </tr>
-      ))}
+          )}
+        </td>
 
-      {/* Empty state */}
-      {filtered.length === 0 && (
-        <tr>
-          <td colSpan="8" className="p-6 text-center text-gray-500">
-            No products found
-          </td>
-        </tr>
-      )}
-    </tbody>
+        {/* Name */}
+        <td className="font-medium">{item.name}</td>
+
+        {/* Category */}
+        <td>{item.category}</td>
+
+        {/* Type */}
+        <td>
+          <span
+            className={`px-2 py-1 rounded-full text-xs ${
+              item.foodType === "veg"
+                ? "bg-green-100 text-green-700"
+                : "bg-red-100 text-red-700"
+            }`}
+          >
+            {item.foodType}
+          </span>
+        </td>
+
+        {/* Price */}
+        <td>₹{item.finalPrice || item.price}</td>
+
+        {/* MRP */}
+        <td className="line-through text-gray-400">₹{item.price}</td>
+
+        {/* Description */}
+        <td className="max-w-xs truncate text-gray-600">
+          {item.description}
+        </td>
+
+        {/* Actions */}
+        <td className="pr-6">
+          <div className="flex justify-end gap-3">
+            <button onClick={() => openEdit(item)}>
+              <Pencil className="w-4 h-4 text-blue-600" />
+            </button>
+            <button onClick={() => handleDelete(item._id)}>
+              <Trash2 className="w-4 h-4 text-red-600" />
+            </button>
+          </div>
+        </td>
+      </tr>
+    );
+  })}
+
+  {/* Empty state */}
+  {filtered.length === 0 && (
+    <tr>
+      <td colSpan="8" className="p-6 text-center text-gray-500">
+        No products found
+      </td>
+    </tr>
+  )}
+</tbody>
   </table>
 </div>
 
@@ -299,8 +353,9 @@ export default function AdminProducts() {
               initial={{ scale: 0.9, y: 30 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 30 }}
-              className="bg-white rounded-2xl p-8 w-full max-w-lg"
+              className="bg-white rounded-2xl p-8 w-full max-w-lg max-h-[85vh] overflow-y-auto"
             >
+
               <h2 className="text-xl font-bold mb-6">
                 {editItem ? "Edit Product" : "Add Product"}
               </h2>
@@ -324,6 +379,68 @@ export default function AdminProducts() {
                   }
                   className="w-full px-4 py-2 rounded-xl border"
                 />
+                {/* ================= MULTIPLE IMAGES ================= */}
+<div>
+  <h3 className="font-semibold mb-2">Additional Images (Optional)</h3>
+
+  {form.images.map((img, i) => (
+    <div key={i} className="flex gap-2 mb-2">
+      <input
+        placeholder="Image URL"
+        value={img.url}
+        onChange={(e) => {
+          const copy = [...form.images];
+          copy[i].url = e.target.value;
+          setForm({ ...form, images: copy });
+        }}
+        className="flex-1 px-3 py-2 border rounded-xl"
+      />
+
+      <label className="flex items-center gap-1 text-xs">
+        <input
+          type="radio"
+          checked={img.isPrimary}
+          onChange={() => {
+            const copy = form.images.map((x, idx) => ({
+              ...x,
+              isPrimary: idx === i,
+            }));
+            setForm({ ...form, images: copy });
+          }}
+        />
+        Primary
+      </label>
+
+      <button
+        type="button"
+        onClick={() => {
+          const copy = [...form.images];
+          copy.splice(i, 1);
+          setForm({ ...form, images: copy });
+        }}
+        className="text-red-500 text-sm"
+      >
+        ✕
+      </button>
+    </div>
+  ))}
+
+  <button
+    type="button"
+    onClick={() =>
+      setForm({
+        ...form,
+        images: [
+          ...form.images,
+          { url: "", isPrimary: form.images.length === 0 },
+        ],
+      })
+    }
+    className="text-sm text-orange-600"
+  >
+    + Add Image
+  </button>
+</div>
 
                 <input
                   placeholder="Product Name"
@@ -333,6 +450,38 @@ export default function AdminProducts() {
                   }
                   className="w-full px-4 py-2 rounded-xl border"
                 />
+                {form.category === "party-combo" && (
+  <div>
+    <h3 className="font-semibold mb-2">Combo Items</h3>
+
+    {form.comboItems.map((c, i) => (
+      <input
+        key={i}
+        placeholder="Item name (e.g. Chicken Biryani)"
+        value={c.itemName}
+        onChange={(e) => {
+          const copy = [...form.comboItems];
+          copy[i].itemName = e.target.value;
+          setForm({ ...form, comboItems: copy });
+        }}
+        className="w-full px-3 py-2 border rounded-xl mb-2"
+      />
+    ))}
+
+    <button
+      type="button"
+      onClick={() =>
+        setForm({
+          ...form,
+          comboItems: [...form.comboItems, { itemName: "" }],
+        })
+      }
+      className="text-sm text-orange-600"
+    >
+      + Add Combo Item
+    </button>
+  </div>
+)}
 
                 <select
                   value={form.category}
@@ -378,6 +527,50 @@ export default function AdminProducts() {
                     className="w-full px-4 py-2 rounded-xl border"
                   />
                 </div>
+                {/* ================= VARIANTS ================= */}
+<div>
+  <h3 className="font-semibold mb-2">Variants (Optional)</h3>
+
+  {form.variants.map((v, i) => (
+    <div key={i} className="flex gap-2 mb-2">
+      <input
+        placeholder="Variant name (Half / Full)"
+        value={v.name}
+        onChange={(e) => {
+          const copy = [...form.variants];
+          copy[i].name = e.target.value;
+          setForm({ ...form, variants: copy });
+        }}
+        className="w-1/2 px-3 py-2 border rounded-xl"
+      />
+      <input
+        type="number"
+        placeholder="Price"
+        value={v.price}
+        onChange={(e) => {
+          const copy = [...form.variants];
+          copy[i].price = e.target.value;
+          setForm({ ...form, variants: copy });
+        }}
+        className="w-1/2 px-3 py-2 border rounded-xl"
+      />
+    </div>
+  ))}
+
+  <button
+    type="button"
+    onClick={() =>
+      setForm({
+        ...form,
+        variants: [...form.variants, { name: "", price: "" }],
+      })
+    }
+    className="text-sm text-orange-600"
+  >
+    + Add Variant
+  </button>
+</div>
+
 
                 <select
                   value={form.foodType}

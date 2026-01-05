@@ -3,37 +3,25 @@ import {
   addReview,
   getReviews,
   getReviewStats,
-  canUserReview
+  canUserReview,
+  getMyReviews,
+  updateReview,
+  deleteReview
 } from "../controller/reviewController.js";
 
 import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-/**
- * BASE PATH: /api/reviews
- */
+router.get("/stats/:productId", getReviewStats);
+router.get("/can-review/:productId", protect, authorizeRoles("user"), canUserReview);
+router.get("/my", protect, authorizeRoles("user"), getMyReviews);
 
-// ✅ ADD REVIEW (user only)
-router.post(
-  "/:productId/review",
-  protect,
-  authorizeRoles("user"),
-  addReview
-);
+router.post("/:productId", protect, authorizeRoles("user"), addReview);
+router.put("/:productId", protect, authorizeRoles("user"), updateReview);
+router.delete("/:productId", protect, authorizeRoles("user"), deleteReview);
 
-// ✅ GET ALL REVIEWS OF PRODUCT
+// ⚠️ ALWAYS LAST
 router.get("/:productId", getReviews);
-
-// ✅ REVIEW STATS
-router.get("/:productId/stats", getReviewStats);
-
-// ✅ CAN USER REVIEW?
-router.get(
-  "/can-review/:productId",
-  protect,
-  authorizeRoles("user"),
-  canUserReview
-);
 
 export default router;

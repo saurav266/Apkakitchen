@@ -2,29 +2,34 @@ import mongoose from "mongoose";
 import Review from "../model/reviewSchema.js";
 import Product from "../model/productSchema.js";
 import Order from "../model/orderSchema.js";
-// ➕ Add review
+
+// 📝 Add review
 export const addReview = async (req, res) => {
   try {
-    const { rating, comment, orderId } = req.body;
     const { productId } = req.params;
 
-    const userId = req.user.id;
-
-    if (!orderId) {
+    // ✅ FIX: Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
       return res.status(400).json({
-        message: "Order ID is required to add review"
+        success: false,
+        message: "Invalid product ID",
       });
     }
 
-    if (!rating || Number(rating) < 1 || Number(rating) > 5) {
-      return res.status(400).json({ message: "Invalid rating" });
+    const { rating, comment } = req.body;
+    const userId = req.user.id;
+    const userName = req.user.data.name;
+
+    if (!rating) {
+      return res.status(400).json({
+        success: false,
+        message: "Rating required",
+      });
     }
 
-    // Prevent duplicate review (same user + product + order)
     const exists = await Review.findOne({
       product: productId,
       user: userId,
-      order: orderId
     });
 
     if (exists) {
@@ -36,24 +41,21 @@ export const addReview = async (req, res) => {
     const review = await Review.create({
       product: productId,
       user: userId,
-      order: orderId,          // ✅ FIXED HERE
-      name: req.user.data.name,
-      rating: Number(rating),
+      name: userName,
+      rating,
       comment,
-      verified: true
+      verified: true,
     });
 
-    return res.status(201).json({
-      success: true,
-      review
-    });
+    res.json({ success: true, review });
 
   } catch (err) {
-    console.error("ADD REVIEW ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
   }
 };
-
 
 
 
@@ -111,16 +113,67 @@ export const getReviewStats = async (req, res) => {
   }
 };
 
-
+// 📄 Can user review this product?
 export const canUserReview = async (req, res) => {
   const { productId } = req.params;
-  const userId = req.user._id;
+  const userId = req.user.id;
 
   const order = await Order.findOne({
-    user: userId,
-    "items.product": productId,
+    userId,
+    "items.productId": productId, // ✅ FIXED
     orderStatus: "delivered",
   });
 
   res.json({ canReview: !!order });
+};
+
+
+// 📄 Get my review for a product
+export const getMyReviews = async (req, res) => {
+  const reviews = await Review.find({
+    user: req.user.id
+  }).select("product");
+
+  const map = {};
+  reviews.forEach(r => {
+    map[r.product.toString()] = true;
+  });
+
+  res.json({
+    success: true,
+    map
+  });
+};
+
+//upadate 
+export const updateReview = async (req, res) => {
+  const { productId } = req.params;
+  const { rating, comment } = req.body;
+
+  const review = await Review.findOneAndUpdate(
+    { product: productId, user: req.user.id },
+    { rating, comment },
+    { new: true }
+  );
+
+  if (!review) {
+    return res.status(404).json({
+      success: false,
+      message: "Review not found"
+    });
+  }
+
+  res.json({ success: true, review });
+};
+
+//delete
+export const deleteReview = async (req, res) => {
+  const { productId } = req.params;
+
+  await Review.findOneAndDelete({
+    product: productId,
+    user: req.user.id
+  });
+
+  res.json({ success: true });
 };

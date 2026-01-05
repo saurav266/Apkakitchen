@@ -1,7 +1,8 @@
 import Product from "../model/productSchema.js";
 
-
-// ➕ Add product (already done)
+/* =========================
+   ➕ ADD PRODUCT (ADMIN)
+========================= */
 export const addProduct = async (req, res) => {
   try {
     const {
@@ -10,151 +11,263 @@ export const addProduct = async (req, res) => {
       description,
       price,
       discountPercentage,
-      image,
       foodType,
-      isAvailable,
       preparationTime,
+      images = [],
+      variants = [],
+      comboItems = [],
     } = req.body;
 
-    // Basic validation
-    if (!name || !category || !price) {
-      return res.status(400).json({ message: "Name, category, and price are required" });
+    const hasVariants = variants.length > 0;
+
+    if (!hasVariants && (price === undefined || price === null)) {
+      return res.status(400).json({
+        success: false,
+        message: "Price is required for products without variants",
+      });
     }
 
-    // Calculate final price after discount
-    const finalPrice = discountPercentage
-      ? price - (price * discountPercentage) / 100
-      : price;
+    const cleanImages = images.filter(img => img.url);
+    if (cleanImages.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "At least one image is required",
+      });
+    }
 
-    // Create new product document
-    const product = new Product({
+    const cleanVariants = hasVariants
+      ? variants.filter(v => v.name && v.price)
+      : [];
+
+    const product = await Product.create({
+      name,
+      category,
+      description,
+      hasVariants,
+      price: hasVariants ? 0 : Number(price),
+      discountPercentage: hasVariants ? 0 : Number(discountPercentage || 0),
+      foodType,
+      preparationTime: preparationTime || 20,
+      images: cleanImages,
+      variants: cleanVariants,
+      comboItems,
+    });
+
+    res.status(201).json({ success: true, product });
+  } catch (error) {
+    console.error("❌ ADD PRODUCT ERROR:", error);
+
+    res.status(400).json({
+      success: false,
+      message: error.message,
+      errors: error.errors, // 👈 keep this for debugging
+    });
+  }
+};
+
+
+/* =========================
+   📄 GET ALL PRODUCTS
+========================= */
+export const getAllProducts = async (req, res) => {
+  try {
+    const products = await Product.find({ isAvailable: true }).sort({
+      createdAt: -1
+    });
+
+    res.status(200).json({
+      success: true,
+      count: products.length,
+      products
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+/* =========================
+   📄 GET SINGLE PRODUCT
+========================= */
+export const getProductById = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      product
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+/* =========================
+   ✏️ UPDATE PRODUCT (ADMIN)
+========================= */
+export const updateProduct = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found"
+      });
+    }
+
+    const {
       name,
       category,
       description,
       price,
       discountPercentage,
-      finalPrice,
-      image,
       foodType,
-      isAvailable,
       preparationTime,
-    });
+      images,
+      variants,
+      comboItems,
+      isAvailable
+    } = req.body;
 
-    // Save to DB
-    await product.save();
+    // 🔹 Basic fields
+    if (name !== undefined) product.name = name;
+    if (category !== undefined) product.category = category;
+    if (description !== undefined) product.description = description;
+    if (price !== undefined) product.price = price;
+    if (discountPercentage !== undefined)
+      product.discountPercentage = discountPercentage;
+    if (foodType !== undefined) product.foodType = foodType;
+    if (preparationTime !== undefined)
+      product.preparationTime = preparationTime;
+    if (isAvailable !== undefined) product.isAvailable = isAvailable;
 
-    res.status(201).json({
-      message: "Product added successfully",
-      product,
-    });
-  } catch (err) {
-    console.error("Error adding product:", err);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
-};
+    // 🔥 Advanced structures
+    if (Array.isArray(images)) product.images = images;
+    if (Array.isArray(variants)) product.variants = variants;
+    if (Array.isArray(comboItems)) product.comboItems = comboItems;
 
-// 📄 Get all products
-export const getAllProducts = async (req, res) => {
-  try {
-    const products = await Product.find({ isAvailable: true }).lean();
+    await product.save(); // triggers pre-save price calculation
 
-    const updatedProducts = products.map((p) => ({
-      ...p,
-      finalPrice:
-        p.discountPercentage > 0
-          ? Math.round(p.price - (p.price * p.discountPercentage) / 100)
-          : p.price,
-    }));
-
-    res.json({
+    res.status(200).json({
       success: true,
-      products: updatedProducts,
-    });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-
-// 📄 Get single product
-export const getProductById = async (req, res) => {
-  try {
-    const product = await Product.findById(req.params.id);
-    if (!product)
-      return res.status(404).json({ success: false, message: "Not found" });
-
-    res.json({ success: true, product });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-// ✏️ Update product
-export const updateProduct = async (req, res) => {
-  try {
-    const product = await Product.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    );
-
-    if (!product)
-      return res.status(404).json({ success: false, message: "Not found" });
-
-    res.json({
-      success: true,
-      message: "Product updated",
       product
     });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
   }
 };
 
-// 🗑️ Delete product
+/* =========================
+   🗑 DELETE PRODUCT (ADMIN)
+========================= */
 export const deleteProduct = async (req, res) => {
   try {
-    const product = await Product.findByIdAndDelete(req.params.id);
+    const product = await Product.findById(req.params.id);
 
-    if (!product)
-      return res.status(404).json({ success: false, message: "Not found" });
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found"
+      });
+    }
 
-    res.json({ success: true, message: "Product deleted" });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    await product.deleteOne();
+
+    res.status(200).json({
+      success: true,
+      message: "Product deleted successfully"
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 };
 
-// 📄 Get popular products by names
+/* =========================
+   ⭐ POPULAR PRODUCTS
+========================= */
+// 📄 Get popular products by names (order preserved)
 export const getPopularProducts = async (req, res) => {
   try {
     const { names } = req.body;
 
-    if (!names || !Array.isArray(names)) {
-      return res.status(400).json({ success: false, message: "Names required" });
+    if (!names || !Array.isArray(names) || names.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Names array is required"
+      });
     }
 
     const products = await Product.find({
       name: { $in: names },
-      isAvailable: true,
-    }).lean(); // 👈 IMPORTANT
+      isAvailable: true
+    }).lean(); // 👈 IMPORTANT (we calculate manually)
 
-    // Calculate finalPrice dynamically
-    const calculated = products.map((p) => ({
-      ...p,
-      finalPrice:
+    const calculated = products.map((p) => {
+      // 🔹 Base product final price
+      const finalPrice =
         p.discountPercentage > 0
           ? Math.round(p.price - (p.price * p.discountPercentage) / 100)
-          : p.price,
-    }));
+          : p.price;
 
-    // Preserve order
+      // 🔹 Variant final prices (if any)
+      let variants = [];
+      if (Array.isArray(p.variants) && p.variants.length > 0) {
+        variants = p.variants.map((v) => ({
+          ...v,
+          finalPrice:
+            v.discountPercentage > 0
+              ? Math.round(v.price - (v.price * v.discountPercentage) / 100)
+              : v.price
+        }));
+      }
+
+      // 🔹 Primary image fallback
+      let primaryImage = null;
+      if (Array.isArray(p.images) && p.images.length > 0) {
+        primaryImage =
+          p.images.find((img) => img.isPrimary) || p.images[0];
+      }
+
+      return {
+        ...p,
+        finalPrice,
+        variants,
+        primaryImage
+      };
+    });
+
+    // 🔹 Preserve frontend order
     const ordered = names
-      .map((n) => calculated.find((p) => p.name === n))
+      .map((name) => calculated.find((p) => p.name === name))
       .filter(Boolean);
 
-    res.json({ success: true, products: ordered });
+    res.status(200).json({
+      success: true,
+      products: ordered
+    });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
   }
 };
