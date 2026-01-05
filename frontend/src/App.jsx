@@ -24,7 +24,7 @@ const OrderSuccess = lazy(() => import("./user-page/OrderSuccess.jsx"));
 const FoodViewPage = lazy(() => import("./user-page/FoodViewPage.jsx"));
 const OrderView = lazy(() => import("./user-page/OrderView.jsx"));
 const ReviewPage = lazy(() => import("./user-page/ReviewPage.jsx"));
-
+const ResetPassword = lazy(() => import("./user-page/ResetPassword.jsx"));
 // Admin Pages
 const AdminDashboard = lazy(() => import("./Admin-pages/AdminDashboard.jsx"));
 const AdminOrders = lazy(() => import("./Admin-pages/AdminOrders.jsx"));
