@@ -216,9 +216,9 @@ export const loginUser = async (req, res) => {
     // ✅ STORE JWT IN COOKIE (7 DAYS)
    res.cookie("token", token, {
   httpOnly: true,
-  secure: false,        // localhost
-  sameSite: "lax",
-  path: "/",            // 🔥 REQUIRED
+  secure: true,        // 🔥 REQUIRED on HTTPS
+  sameSite: "none",    // 🔥 REQUIRED when frontend + backend are same domain via proxy
+  path: "/",
   maxAge: 7 * 24 * 60 * 60 * 1000,
 });
 
