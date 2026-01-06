@@ -21,43 +21,44 @@ const [forgotLoading, setForgotLoading] = useState(false);
 
 
   // 🔐 Submit with backend API
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
 
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email, password }),
-      });
+  try {
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include", // 🔥 REQUIRED
+      body: JSON.stringify({ email, password }),
+    });
 
-      const data = await res.json();
+    const data = await res.json();
 
-      if (!res.ok) {
-        alert(data.message || "Login failed");
-        return;
-      }
-
-      localStorage.setItem("user", JSON.stringify(data.user));
-      window.dispatchEvent(new Event("authChanged"));
-
-      if (data.user.role === "admin") {
-  setTimeout(() => navigate("/admin/dashboard"), 50);
-} else if (data.user.role === "delivery") {
-  setTimeout(() => navigate("/delivery/orders"), 50);
-} else {
-  setTimeout(() => navigate("/"), 50);
-}
-      
-
-    } catch (err) {
-      alert("Server not reachable");
-    } finally {
-      setLoading(false);
+    if (!res.ok) {
+      alert(data.message || "Login failed");
+      return;
     }
-  };
+
+    // 🔥 IMPORTANT: trigger profile refetch
+    window.dispatchEvent(new Event("authChanged"));
+
+    // 🔥 redirect by role
+    if (data.user.role === "admin") {
+      navigate("/admin/dashboard");
+    } else if (data.user.role === "delivery") {
+      navigate("/delivery/orders");
+    } else {
+      navigate("/");
+    }
+
+  } catch (err) {
+    alert("Server not reachable");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // 👉 trigger small pulse when typing
   useEffect(() => {

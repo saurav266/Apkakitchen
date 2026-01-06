@@ -76,3 +76,4 @@ const fetchUser = async () => {
 export const useAuth = () => useContext(AuthContext);
 
 
+export default AuthContext;
