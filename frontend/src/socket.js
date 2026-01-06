@@ -1,9 +1,8 @@
 import { io } from "socket.io-client";
 
-export const socket = io("https://apkakitchen.com", {
+export const socket = io("/", {
+  withCredentials: true,     // 🔥 REQUIRED for auth cookie
   autoConnect: false,
-  reconnection: true,
-  reconnectionAttempts: Infinity,
-  reconnectionDelay: 1000,
   transports: ["websocket"],
+  reconnection: true,
 });
