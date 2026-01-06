@@ -204,7 +204,7 @@ function VerifyOtpModal({ otpToken, onClose, onVerified }) {
       setLoading(true);
 
       await axios.post(
-        "http://localhost:3000/api/admin/verify-otp",
+        "/api/admin/verify-otp",
         { otp, otpToken },
         { withCredentials: true }
       );

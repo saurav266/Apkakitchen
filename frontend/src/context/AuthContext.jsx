@@ -14,7 +14,7 @@ export const AuthProvider = ({ children }) => {
   const fetchUser = async () => {
     try {
       const res = await axios.get(
-        "http://localhost:3000/api/auth/profile",
+        "/api/auth/profile",
         { withCredentials: true }
       );
       setUser(res.data.user);
@@ -54,7 +54,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     await axios.post(
-      "http://localhost:3000/api/auth/logout",
+      "/api/auth/logout",
       {},
       { withCredentials: true }
     );

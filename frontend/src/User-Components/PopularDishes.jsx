@@ -9,7 +9,7 @@ import eggBiryaniImg from "../assets/hero-section/egg-biryani.png";
 import chholaComboImg from "../assets/hero-section/puri-chole.png";
 import chicken65Img from "../assets/hero-section/chicken65.png";
 
-const API = "http://localhost:3000";
+const API = "";
 /* 🔥 CONTROL POPULAR ITEMS BY NAME ONLY */
 const POPULAR_DISH_NAMES = [
   "Egg Biryani",
