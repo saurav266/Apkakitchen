@@ -3,8 +3,8 @@ import { motion } from "framer-motion";
 import chefImg from "../assets/login/chef-img.png";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
-
-
+import { getLocalCart, setLocalCart } from "../utils/cart";
+import axios from "axios";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -38,13 +38,15 @@ export default function Login() {
       localStorage.setItem("user", JSON.stringify(data.user));
       window.dispatchEvent(new Event("authChanged"));
 
+      await syncCartOnLogin();
+
       if (data.user.role === "admin") {
-  setTimeout(() => navigate("/admin/dashboard"), 50);
-} else if (data.user.role === "delivery") {
-  setTimeout(() => navigate("/delivery/orders"), 50);
-} else {
-  setTimeout(() => navigate("/"), 50);
-}
+        setTimeout(() => navigate("/admin/dashboard"), 50);
+      } else if (data.user.role === "delivery") {
+        setTimeout(() => navigate("/delivery/orders"), 50);
+      } else {
+        setTimeout(() => navigate("/"), 50);
+      }
       
 
     } catch (err) {
@@ -61,6 +63,23 @@ export default function Login() {
       return () => clearTimeout(t);
     }
   }, [typing]);
+
+  const syncCartOnLogin = async () => {
+    const guestCart = getLocalCart();
+    if (!guestCart.length) return;
+
+    const res = await axios.post(
+      "http://localhost:3000/api/cart/sync",
+      { items: guestCart },
+      { withCredentials: true }
+    );
+
+    if (res.data.success) {
+      setLocalCart(res.data.cart); // 🔥 replace local cart
+      window.dispatchEvent(new Event("cartUpdated"));
+    }
+  };
+
 
   return (
     <section className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-amber-50 to-red-50 px-4 overflow-hidden">

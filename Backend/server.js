@@ -14,7 +14,7 @@ await connectDB();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5174";
 
 // ===== MIDDLEWARE =====
 
@@ -27,10 +27,17 @@ app.post(
 
 app.use(
   cors({
-    origin: FRONTEND_URL,
-    credentials: true
+    origin: (origin, callback) => {
+      if (!origin || origin.startsWith("http://localhost:")) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
   })
 );
+
 app.use(compression());
 app.use(express.json());
 app.use(cookieParser());
@@ -45,6 +52,7 @@ import productRoute from "./route/productRoute.js";
 import contactRoutes from "./route/contactRoute.js"
 import paymentRoute from "./route/paymentRoute.js"
 import reviewRoutes from "./route/reviewRoute.js";
+import cartRoutes from "./route/cartRoutes.js"
 
 app.use("/api/users", UserRoute);
 app.use("/api/delivery", DeliveryBoyRoute);
@@ -56,6 +64,8 @@ app.use("/api/location", location);
 app.use("/api/contact", contactRoutes);
 app.use("/api/payment", paymentRoute);
 app.use("/api/reviews", reviewRoutes);
+app.use("/api/cart", cartRoutes);
+
 
 // ===== HEALTH CHECK =====
 app.get("/", (req, res) => {

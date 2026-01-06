@@ -1,6 +1,49 @@
 import mongoose from "mongoose";
 // import { forgetPassword } from "../controllers/UserController";
 
+const cartItemSchema = new mongoose.Schema(
+  {
+    cartItemId: {
+      type: String,
+      required: true, // productId or productId_variantId
+    },
+
+    product: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+      required: true,
+    },
+
+    variant: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+
+    name: {
+      type: String,
+      required: true,
+    },
+
+    image: {
+      type: String,
+      required: true,
+    },
+
+    price: {
+      type: Number,
+      required: true,
+    },
+
+    qty: {
+      type: Number,
+      default: 1,
+      min: 1,
+    },
+  },
+  { _id: false }
+);
+
+
 const addressSchema = new mongoose.Schema(
   {
     label: {
@@ -91,6 +134,11 @@ const userSchema = new mongoose.Schema({
         default: 'user'
     },
     addresses: [addressSchema],
+
+    cart: {
+      type: [cartItemSchema],
+      default: [],
+    },
 
     forgetPasswordToken: String,
     forgetPasswordExpiry: Date,

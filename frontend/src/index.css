@@ -1,6 +1,6 @@
 /* ================= IMPORTS ================= */
-@import "tailwindcss";
 @import url("https://fonts.googleapis.com/css2?family=Rock+Salt&display=swap");
+@import "tailwindcss";
 
 /* ================= GRADIENT ================= */
 @keyframes gradientMove {

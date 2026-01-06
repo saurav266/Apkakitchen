@@ -39,10 +39,42 @@ export default function Menu() {
     }
   };
   const getImage = (item) =>
-  item.images?.find((img) => img.isPrimary)?.url ||
-  item.images?.[0]?.url ||
-  "/placeholder-food.png";
+    item.images?.find((img) => img.isPrimary)?.url ||
+    item.images?.[0]?.url ||
+    "/placeholder-food.png";
 
+
+  const getDisplayVariant = (product) => {
+    if (!product.hasVariants || !product.variants?.length) {
+      return {
+        price: product.finalPrice ?? product.price ?? 0,
+        label: product.name,
+      };
+    }
+
+    // find default variant
+    const variant =
+      product.variants.find((v) => v.isDefault) || product.variants[0];
+
+    return {
+      price: variant.finalPrice ?? variant.price,
+      label: `${product.name} (${variant.name})`,
+      variantId: variant._id,
+    };
+  };
+
+
+
+
+  //helpers
+  const syncCart = (updated) => {
+    localStorage.setItem("cart", JSON.stringify(updated));
+    setCart(updated);
+    window.dispatchEvent(new Event("cartUpdated"));
+
+    setMiniOpen(true);
+    setTimeout(() => setMiniOpen(false), 2000);
+  };
 
   useEffect(() => {
     fetchMenu();
@@ -56,24 +88,46 @@ export default function Menu() {
 
   /* ================= CART ================= */
   const updateCart = (item, delta) => {
-    let c = [...cart];
-    const found = c.find((i) => i._id === item._id);
+    const display = getDisplayVariant(item);
 
-    if (found) {
-      found.qty += delta;
-      if (found.qty <= 0) c = c.filter((i) => i._id !== item._id);
+    const cartItemId = display.variantId
+      ? `${item._id}_${display.variantId}`
+      : item._id;
+
+    let updated = [...cart];
+    const index = updated.findIndex(
+      (i) => i.cartItemId === cartItemId
+    );
+
+    if (index > -1) {
+      updated[index].qty += delta;
+      if (updated[index].qty <= 0) updated.splice(index, 1);
     } else if (delta > 0) {
-      c.push({ ...item, qty: 1 });
+      updated.push({
+        cartItemId,
+        productId: item._id,
+        variantId: display.variantId || null,
+        name: display.label,
+        image: getImage(item),
+        finalPrice: display.price,
+        qty: 1,
+      });
     }
 
-    setCart(c);
-    localStorage.setItem("cart", JSON.stringify(c));
-    window.dispatchEvent(new Event("cartUpdated"));
-    setMiniOpen(true);
+    syncCart(updated);
   };
 
-  const getQty = (id) =>
-    cart.find((i) => i._id === id)?.qty || 0;
+  const getQty = (product) => {
+  const display = getDisplayVariant(product);
+  const cartItemId = display.variantId
+    ? `${product._id}_${display.variantId}`
+    : product._id;
+
+  return cart.find((i) => i.cartItemId === cartItemId)?.qty || 0;
+};
+
+
+
 
   /* ================= FILTER ================= */
   const filtered = menuData.filter((i) => {
@@ -181,7 +235,8 @@ export default function Menu() {
             className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8"
           >
             {filtered.map((item) => {
-              const qty = getQty(item._id);
+              const display = getDisplayVariant(item);   // ✅ HERE
+              const qty = getQty(item);                  // ✅ HERE
               const isVeg = item.foodType === "veg";
 
               return (
@@ -195,13 +250,11 @@ export default function Menu() {
                     ${isVeg ? "border-green-200" : "border-red-200"}
                   `}
                 >
-                  {/* Image */}
-                  <div className="h-48 bg-orange-50 flex items-center justify-center overflow-hidden relative">
+                  {/* IMAGE */}
+                  <div className="h-48 bg-orange-50 relative overflow-hidden">
                     <span
-                      className={`
-                        absolute top-3 right-3 text-xs font-semibold px-2 py-1 rounded-full z-10
-                        ${isVeg ? "bg-green-500 text-white" : "bg-red-500 text-white"}
-                      `}
+                      className={`absolute top-3 right-3 text-xs font-semibold px-2 py-1 rounded-full z-10
+                      ${isVeg ? "bg-green-500" : "bg-red-500"} text-white`}
                     >
                       {isVeg ? "VEG" : "NON-VEG"}
                     </span>
@@ -211,28 +264,22 @@ export default function Menu() {
                       alt={item.name}
                       className="h-48 w-full object-cover"
                       whileHover={{ scale: 1.15 }}
-                      transition={{ duration: 0.4 }}
                     />
-
                   </div>
 
-                  {/* Content */}
+                  {/* CONTENT */}
                   <div className="p-5 flex flex-col flex-1">
-                    <h3 className="text-lg font-semibold">{item.name}</h3>
+                    <h3 className="text-lg font-semibold">
+                      {display.label}
+                    </h3>
+
                     <p className="text-sm text-gray-600 mb-2">
                       {item.description}
                     </p>
 
-                    <div className="text-yellow-500 text-sm mb-3">
-                      {"★".repeat(Math.floor(item.rating || 0))}{" "}
-                      <span className="text-gray-500">
-                        {(item.rating || 0).toFixed(1)}
-                      </span>
-                    </div>
-
                     <div className="mt-auto flex items-center justify-between">
                       <span className="text-lg font-bold text-orange-600">
-                        ₹{item.finalPrice || item.price}
+                        ₹{display.price}
                       </span>
 
                       {qty === 0 ? (
@@ -241,7 +288,7 @@ export default function Menu() {
                             e.stopPropagation();
                             updateCart(item, 1);
                           }}
-                          className="px-4 py-2 rounded-full text-sm font-medium bg-gradient-to-r from-orange-500 to-red-500 text-white shadow"
+                          className="px-4 py-2 rounded-full bg-gradient-to-r from-orange-500 to-red-500 text-white"
                         >
                           Add
                         </button>
@@ -252,7 +299,7 @@ export default function Menu() {
                               e.stopPropagation();
                               updateCart(item, -1);
                             }}
-                            className="w-8 h-8 rounded-full bg-gray-200 text-lg"
+                            className="w-8 h-8 rounded-full bg-gray-200"
                           >
                             −
                           </button>
@@ -262,7 +309,7 @@ export default function Menu() {
                               e.stopPropagation();
                               updateCart(item, 1);
                             }}
-                            className="w-8 h-8 rounded-full bg-orange-500 text-white text-lg"
+                            className="w-8 h-8 rounded-full bg-orange-500 text-white"
                           >
                             +
                           </button>
@@ -273,6 +320,7 @@ export default function Menu() {
                 </motion.div>
               );
             })}
+
           </motion.div>
         </AnimatePresence>
 
