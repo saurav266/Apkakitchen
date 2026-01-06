@@ -4,6 +4,8 @@ import { socket } from "../socket";
 
 const AuthContext = createContext(null);
 
+const API = "http://localhost:3000";
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -14,10 +16,29 @@ export const AuthProvider = ({ children }) => {
   const fetchUser = async () => {
     try {
       const res = await axios.get(
-        "http://localhost:3000/api/auth/profile",
+        `${API}/api/auth/profile`,
         { withCredentials: true }
       );
       setUser(res.data.user);
+      if (res.data.user) {
+        // fetch and sync cart
+        try {
+          const cartRes = await axios.get(`${API}/api/cart`, { withCredentials: true });
+          const frontendCart = cartRes.data.cart.map(item => ({
+            cartItemId: item.cartItemId,
+            productId: item.product,
+            variantId: item.variant,
+            name: item.name,
+            image: item.image,
+            finalPrice: item.price,
+            qty: item.qty
+          }));
+          localStorage.setItem("cart", JSON.stringify(frontendCart));
+          window.dispatchEvent(new Event("cartUpdated"));
+        } catch (err) {
+          console.error("Failed to fetch cart", err);
+        }
+      }
     } catch {
       setUser(null);
     } finally {
@@ -48,13 +69,22 @@ export const AuthProvider = ({ children }) => {
 }, [user, loading]);
 
 
-  const login = (userData) => {
+  const login = async (userData) => {
     setUser(userData);
+    // sync cart
+    const cart = JSON.parse(localStorage.getItem("cart")) || [];
+    if (cart.length > 0) {
+      try {
+        await axios.post(`${API}/api/cart/sync`, { items: cart }, { withCredentials: true });
+      } catch (err) {
+        console.error("Failed to sync cart", err);
+      }
+    }
   };
 
   const logout = async () => {
     await axios.post(
-      "http://localhost:3000/api/auth/logout",
+      `${API}/api/auth/logout`,
       {},
       { withCredentials: true }
     );

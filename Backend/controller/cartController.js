@@ -149,7 +149,7 @@ export const syncCart = async (req, res) => {
         variant: guestItem.variantId || null,
         name: guestItem.name,
         image: guestItem.image,
-        price: guestItem.price,
+        price: guestItem.finalPrice || guestItem.price,
         qty: guestItem.qty,
       });
     }

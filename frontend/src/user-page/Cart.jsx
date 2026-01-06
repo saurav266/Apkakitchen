@@ -2,9 +2,14 @@ import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import MiniCart from "../User-Components/MiniCart.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
+import axios from "axios";
+
+const API = "http://localhost:3000";
 
 export default function CartPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [cart, setCart] = useState([]);
   const [miniOpen, setMiniOpen] = useState(false);
 
@@ -29,6 +34,8 @@ export default function CartPage() {
       ...item,
       qty: Number(item.qty ?? 1),
       finalPrice: Number(item.finalPrice ?? item.price ?? 0),
+      productId: item.productId || item.product,
+      variantId: item.variantId || item.variant,
       image:
         item.image ||
         item.images?.find((i) => i.isPrimary)?.url ||
@@ -50,6 +57,15 @@ export default function CartPage() {
       .filter((i) => i.qty > 0);
 
     syncCart(updated);
+
+    if (user) {
+      const newQty = updated.find(i => i.cartItemId === cartItemId)?.qty || 0;
+      if (newQty > 0) {
+        axios.patch(`${API}/api/cart/update`, { cartItemId, qty: newQty }, { withCredentials: true }).catch(err => console.error("Failed to update cart", err));
+      } else {
+        axios.delete(`${API}/api/cart/remove/${cartItemId}`, { withCredentials: true }).catch(err => console.error("Failed to remove from cart", err));
+      }
+    }
   };
 
   const removeItem = (cartItemId) => {
@@ -57,6 +73,10 @@ export default function CartPage() {
       (i) => i.cartItemId !== cartItemId
     );
     syncCart(updated);
+
+    if (user) {
+      axios.delete(`${API}/api/cart/remove/${cartItemId}`, { withCredentials: true }).catch(err => console.error("Failed to remove from cart", err));
+    }
   };
 
   /* ================= CHECKOUT ================= */

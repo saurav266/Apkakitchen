@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import MiniCart from "../User-Components/MiniCart.jsx";
 import axios from "axios";
+import { useAuth } from "../context/AuthContext.jsx";
 
 const API = "http://localhost:3000";
 
@@ -18,6 +19,7 @@ const categories = [
 
 export default function Menu() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [activeCat, setActiveCat] = useState("all");
   const [foodType, setFoodType] = useState("all");
@@ -99,9 +101,16 @@ export default function Menu() {
       (i) => i.cartItemId === cartItemId
     );
 
+    const wasExisting = index > -1;
+    let newQty = 0;
+
     if (index > -1) {
       updated[index].qty += delta;
-      if (updated[index].qty <= 0) updated.splice(index, 1);
+      newQty = updated[index].qty;
+      if (updated[index].qty <= 0) {
+        updated.splice(index, 1);
+        newQty = 0;
+      }
     } else if (delta > 0) {
       updated.push({
         cartItemId,
@@ -112,9 +121,34 @@ export default function Menu() {
         finalPrice: display.price,
         qty: 1,
       });
+      newQty = 1;
     }
 
     syncCart(updated);
+
+    // Backend sync if logged in
+    if (user) {
+      if (wasExisting) {
+        if (newQty <= 0) {
+          // remove
+          axios.delete(`${API}/api/cart/remove/${cartItemId}`, { withCredentials: true }).catch(err => console.error("Failed to remove from cart", err));
+        } else {
+          // update
+          axios.patch(`${API}/api/cart/update`, { cartItemId, qty: newQty }, { withCredentials: true }).catch(err => console.error("Failed to update cart", err));
+        }
+      } else if (delta > 0) {
+        // add
+        const newItem = updated.find(i => i.cartItemId === cartItemId);
+        axios.post(`${API}/api/cart/add`, {
+          productId: newItem.productId,
+          variantId: newItem.variantId,
+          name: newItem.name,
+          image: newItem.image,
+          price: newItem.finalPrice,
+          qty: newItem.qty
+        }, { withCredentials: true }).catch(err => console.error("Failed to add to cart", err));
+      }
+    }
   };
 
   const getQty = (product) => {
