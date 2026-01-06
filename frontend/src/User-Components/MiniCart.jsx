@@ -1,149 +1,98 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 
 export default function MiniCart({ open, onClose }) {
   const [cart, setCart] = useState([]);
+  const listRef = useRef(null);
   const navigate = useNavigate();
 
-  // 🔹 Load cart from localStorage
-  useEffect(() => {
-    const c = JSON.parse(localStorage.getItem("cart")) || [];
-    setCart(c);
-  }, []);
+  const formatPrice = (n) => Number(n || 0).toFixed(2);
 
-  // 🔹 Sync cart when updated elsewhere
-useEffect(() => {
-  const c = JSON.parse(localStorage.getItem("cart")) || [];
-
-  const fixed = c.map((i) => ({
-    ...i,
-    finalPrice: Number(i.finalPrice ?? i.price ?? 0),
-    qty: Number(i.qty ?? 1),
-  }));
-
-  setCart(fixed);
-  localStorage.setItem("cart", JSON.stringify(fixed));
-}, []);
-
-
-  // 🔹 Remove item
-  const removeItem = (id) => {
-    const c = cart.filter((i) => i._id !== id);
-    setCart(c);
-    localStorage.setItem("cart", JSON.stringify(c));
-    window.dispatchEvent(new Event("cartUpdated"));
+  const loadCart = () => {
+    const raw = JSON.parse(localStorage.getItem("cart")) || [];
+    setCart(raw);
   };
 
-  // 🔹 Update quantity
-const updateQty = (id, delta) => {
-  let c = [...cart];
-  const item = c.find((i) => i._id === id);
-  if (!item) return;
+  useEffect(() => {
+    loadCart();
+    window.addEventListener("cartUpdated", loadCart);
+    return () => window.removeEventListener("cartUpdated", loadCart);
+  }, []);
 
-  item.qty = Number(item.qty ?? 1) + delta;
-  c = c.filter((i) => i.qty > 0);
+  useEffect(() => {
+    if (listRef.current) {
+      listRef.current.scrollTop = listRef.current.scrollHeight;
+    }
+  }, [cart]);
 
-  setCart(c);
-  localStorage.setItem("cart", JSON.stringify(c));
-  window.dispatchEvent(new Event("cartUpdated"));
-};
-
-
-const total = cart.reduce(
-  (sum, i) =>
-    sum + Number(i.finalPrice ?? i.price ?? 0) * Number(i.qty ?? 1),
-  0
-);
-
+  const total = cart.reduce(
+    (s, i) => s + (i.finalPrice ?? i.price) * i.qty,
+    0
+  );
 
   return (
     <AnimatePresence>
       {open && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.3 }}
-          className="
-            fixed top-20 right-6 z-[300]
-            w-80 bg-white rounded-2xl shadow-xl
-            p-5
-          "
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Your Cart</h3>
-            <button onClick={onClose} className="text-gray-500">✕</button>
-          </div>
+        <>
+          <div className="fixed inset-0 z-[299]" onClick={onClose} />
 
-          {/* Empty */}
-          {cart.length === 0 ? (
-            <p className="text-gray-500 text-sm">Cart is empty</p>
-          ) : (
-            <div className="space-y-4 max-h-64 overflow-y-auto">
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="fixed top-20 right-6 z-[300] w-80 bg-white rounded-2xl shadow-xl p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between mb-3">
+              <h3 className="font-semibold">Your Cart</h3>
+              <button onClick={onClose}>✕</button>
+            </div>
+
+            <div
+              ref={listRef}
+              className="flex flex-col gap-3 max-h-64 overflow-y-auto"
+            >
               {cart.map((item) => (
-                <motion.div
-                  key={item._id || item.id}   
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
+                <div
+                  key={item.cartItemId}
                   className="flex items-center gap-3"
                 >
-                  {/* Image */}
                   <img
-                    src={item.image || "/placeholder-food.png"}
-                    alt={item.name}
-                    className="w-12 h-12 rounded-xl object-cover border"
+                    src={item.image}
+                    className="w-10 h-10 rounded-lg object-cover"
+                    alt=""
                   />
-
-                  {/* Name + Qty */}
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{item.name}</p>
-                    <p className="text-xs text-gray-500">Qty: {item.qty}</p>
+                  <div className="flex-1 text-sm">
+                    <p>{item.name}</p>
+                    <p className="text-xs text-gray-500">
+                      {item.qty} × ₹{item.finalPrice}
+                    </p>
                   </div>
-
-                  {/* Price */}
-                 <p className="text-sm font-semibold">
-  ₹{(item.finalPrice ?? item.price ?? 0) * item.qty}
-</p>
-
-                  {/* Remove */}
-                  <button
-                    onClick={() => removeItem(item._id)}
-                    className="text-red-500 text-xs hover:underline ml-2"
-                  >
-                    Remove
-                  </button>
-                </motion.div>
+                  <p className="text-sm font-semibold">
+                    ₹{formatPrice(item.qty * item.finalPrice)}
+                  </p>
+                </div>
               ))}
             </div>
-          )}
 
-          {/* Footer */}
-          {cart.length > 0 && (
-            <>
-              <div className="border-t my-4" />
-              <div className="flex justify-between font-semibold mb-4">
-                <span>Total</span>
-                <span>₹{total}</span>
-              </div>
+            <div className="border-t my-3" />
+            <div className="flex justify-between font-semibold mb-3">
+              <span>Total</span>
+              <span>₹{formatPrice(total)}</span>
+            </div>
 
-              <motion.button
-                onClick={() => navigate("/checkout")}
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                className="
-                  w-full py-2.5 rounded-full
-                  bg-gradient-to-r from-orange-600 to-red-600
-                  text-white font-semibold
-                "
-              >
-                Checkout
-              </motion.button>
-            </>
-          )}
-        </motion.div>
+            <button
+              onClick={() => {
+                onClose();
+                navigate("/cart");
+              }}
+              className="w-full py-2 rounded-full bg-orange-600 text-white"
+            >
+              View Cart
+            </button>
+          </motion.div>
+        </>
       )}
     </AnimatePresence>
   );

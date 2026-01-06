@@ -10,6 +10,7 @@ import DeliveryBoy from "../model/deliveryBoySchema.js";
 import { io }  from "../server.js";
 import crypto from "crypto";
 import { sendAssignDeliveryBoyEmail } from "../services/emailService.js";
+import { redis } from "../config/redis.js";
 
 const DATABASE_URL = "mongodb://127.0.0.1:27017/Apkakitchen"
 // const createAdmin = async () => {
@@ -84,13 +85,23 @@ export const loginAdmin = async (req, res) => {
     );
 
     // ✅ STORE TOKEN IN COOKIE (CRITICAL)
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: false,      // ❗ false on localhost
-      sameSite: "lax",    // ❗ REQUIRED
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    await redis.set(
+  `session:${token}`,
+  JSON.stringify({
+    id: admin._id,
+    role: admin.role,
+    email: admin.email
+  }),
+  { EX: 60 * 60 * 24 * 7 }
+);
 
+res.cookie("token", token, {
+  httpOnly: true,
+  secure: true,        // ✅ MUST be true on VPS (HTTPS)
+  sameSite: "none",    // ✅ REQUIRED for frontend + backend
+  path: "/",
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+});
     res.status(200).json({
       success: true,
       message: "Admin logged in successfully",

@@ -4,6 +4,7 @@ import Order from "../model/orderSchema.js";
 import { io }  from "../server.js";
 import crypto from "crypto";
 import { autoRefund } from "../utils/autoRefund.js"
+import {redis} from "../config/redis.js";
 
 /**
  * @desc    Add new delivery boy
@@ -297,14 +298,25 @@ console.log("🚚 loginDeliveryBoy HIT");
       { expiresIn: "7d" }
     );
 
+     await redis.set(
+      `session:${token}`,
+      JSON.stringify({
+        id: deliveryBoy._id,
+        role: deliveryBoy.role,
+        email: deliveryBoy.email
+      }),
+      { EX: 60 * 60 * 24 * 7 } // 7 days
+    );
+
+
     // ================= COOKIE =================
-    res.cookie("token", token, {
-  httpOnly: true,
-  secure: false,       // localhost only
-  sameSite: "lax",
-  path: "/",
-  maxAge: 7 * 24 * 60 * 60 * 1000
-});
+  res.cookie("token", token, {
+      httpOnly: true,
+      secure: true,        // ✅ MUST be true on VPS
+      sameSite: "none",    // ✅ REQUIRED
+      path: "/",
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
 
 
     deliveryBoy.lastLogin = new Date();
@@ -340,11 +352,17 @@ console.log("🚚 loginDeliveryBoy HIT");
  */
 export const logoutDeliveryBoy = async (req, res) => {
   try {
-    res.clearCookie("token", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict"
-    });
+    
+  if (token) {
+    await redis.del(`session:${token}`);
+  }
+
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "none",
+    path: "/"
+  });
 
     return res.json({
       success: true,

@@ -4,6 +4,7 @@ import chefImg from "../assets/login/chef-img.png";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
+import { getLocalCart, setLocalCart } from "../utils/cart";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -43,6 +44,9 @@ export default function Login() {
       await login(); // 🔥 fetches /profile & updates AuthContext
 
       // 🔁 Redirect by role
+
+      await syncCartOnLogin();
+      
       if (data.user.role === "admin") {
         navigate("/admin/dashboard", { replace: true });
       } else if (data.user.role === "delivery") {
@@ -66,6 +70,21 @@ export default function Login() {
     }
   }, [typing]);
 
+    const syncCartOnLogin = async () => {
+    const guestCart = getLocalCart();
+    if (!guestCart.length) return;
+
+    const res = await axios.post(
+      "http://localhost:3000/api/cart/sync",
+      { items: guestCart },
+      { withCredentials: true }
+    );
+
+    if (res.data.success) {
+      setLocalCart(res.data.cart); // 🔥 replace local cart
+      window.dispatchEvent(new Event("cartUpdated"));
+    }
+  };
   const handleForgotPassword = async () => {
   if (!forgotEmail) {
     return alert("Please enter your email");

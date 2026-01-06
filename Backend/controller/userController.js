@@ -252,19 +252,26 @@ export const loginUser = async (req, res) => {
 };
 
 
-export const logoutUser = (req, res) => {
+export const logoutUser = async (req, res) => {
+  const token = req.cookies?.token;
+
+  if (token) {
+    await redis.del(`session:${token}`);
+  }
+
   res.clearCookie("token", {
     httpOnly: true,
-  secure: true,
-  sameSite: "none",
-  path: "/",    // 🔥 MUST MATCH LOGIN
+    secure: true,
+    sameSite: "none",
+    path: "/"
   });
 
-  return res.status(200).json({
+  res.json({
     success: true,
-    message: "Logged out successfully",
+    message: "Logged out successfully"
   });
 };
+
 
 
 

@@ -10,6 +10,7 @@ import {
   Zap,
 } from "lucide-react";
 import Reviews from "../User-Components/ReviewSection.jsx";
+import { addItemToCart } from "../utils/cart.js"
 
 const API = "";
 const AUTO_SLIDE_INTERVAL = 4000; // 4 sec
@@ -166,44 +167,24 @@ const addToCart = () => {
 
   const price = getEffectivePrice();
 
-  if (!price || isNaN(price)) {
-    console.error("PRICE ERROR", { food, selectedVariant });
-    alert("Price error. Please refresh.");
-    return;
-  }
-
-
   const cartItemId = hasVariants
     ? `${food._id}_${selectedVariant._id}`
     : food._id;
 
-  let cart = JSON.parse(localStorage.getItem("cart")) || [];
-
-  const index = cart.findIndex(
-    (item) => item.cartItemId === cartItemId
-  );
-
-  if (index > -1) {
-    cart[index].qty += qty;
-  } else {
-    cart.push({
-      cartItemId,
-      productId: food._id,
-      variantId: selectedVariant?._id || null,
-      name: hasVariants
-        ? `${food.name} (${selectedVariant.name})`
-        : food.name,
-      image:
-        food.images?.find((i) => i.isPrimary)?.url ||
-        food.images?.[0]?.url ||
-        food.image,
-      qty,
-      price, // ✅ single source of truth
-    });
-  }
-
-  localStorage.setItem("cart", JSON.stringify(cart));
-  window.dispatchEvent(new Event("cartUpdated"));
+  addItemToCart({
+    cartItemId,
+    productId: food._id,
+    variantId: selectedVariant?._id || null,
+    name: hasVariants
+      ? `${food.name} (${selectedVariant.name})`
+      : food.name,
+    image:
+      food.images?.find((i) => i.isPrimary)?.url ||
+      food.images?.[0]?.url ||
+      food.image,
+    price,
+    qty,
+  });
 };
 
   const buyNow = () => {

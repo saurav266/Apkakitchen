@@ -46,6 +46,7 @@ import productRoute from "./route/productRoute.js";
 import contactRoutes from "./route/contactRoute.js"
 import paymentRoute from "./route/paymentRoute.js"
 import reviewRoutes from "./route/reviewRoute.js";
+import cartRoutes from "./route/cartRoutes.js"
 
 app.use("/api/users", UserRoute);
 app.use("/api/delivery", DeliveryBoyRoute);
@@ -57,6 +58,8 @@ app.use("/api/location", location);
 app.use("/api/contact", contactRoutes);
 app.use("/api/payment", paymentRoute);
 app.use("/api/reviews", reviewRoutes);
+app.use("/api/cart", cartRoutes);
+
 
 // ===== HEALTH CHECK =====
 app.get("/", (req, res) => {

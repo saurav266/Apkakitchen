@@ -5,11 +5,12 @@ import DeliveryBoy from "../model/deliveryBoySchema.js";
 import { loginAdmin } from "../controller/adminController.js";
 import { loginUser } from "../controller/userController.js";
 import { loginDeliveryBoy } from "../controller/deliveryBoyController.js";
-
+import { redis } from "../config/redis.js";
 /**
  * @desc    Authenticate user (Admin / User / Delivery)
  * @access  Protected
  */
+// protect middleware (FIXED)
 export const protect = async (req, res, next) => {
   try {
     const token = req.cookies?.token;
@@ -17,36 +18,52 @@ export const protect = async (req, res, next) => {
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: "Not authorized"
+        message: "Not authorized",
       });
     }
 
-    // ✅ 1. Verify JWT signature
+    // 1️⃣ Verify JWT
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // ✅ 2. Check Redis session
+    // 2️⃣ Check Redis session
     const session = await redis.get(`session:${token}`);
-
     if (!session) {
       return res.status(401).json({
         success: false,
-        message: "Session expired"
+        message: "Session expired",
       });
     }
 
-    // ✅ 3. Attach user from Redis (FAST)
+    // 3️⃣ FETCH FULL USER (🔥 THIS IS THE FIX)
+    let user;
+    if (decoded.role === "user") {
+      user = await User.findById(decoded.id); // ❌ NO .select()
+    } else if (decoded.role === "admin") {
+      user = await Admin.findById(decoded.id);
+    } else if (decoded.role === "delivery") {
+      user = await DeliveryBoy.findById(decoded.id);
+    }
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // 4️⃣ Attach full user
     req.user = {
-      id: decoded.id,
+      id: user._id,
       role: decoded.role,
-      data: JSON.parse(session)
+      data: user, // 🔥 contains addresses
     };
 
     next();
-  } catch (error) {
-    console.error("AUTH ERROR:", error);
+  } catch (err) {
+    console.error("AUTH ERROR:", err);
     return res.status(401).json({
       success: false,
-      message: "Not authorized"
+      message: "Session expired",
     });
   }
 };
