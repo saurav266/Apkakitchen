@@ -3,11 +3,11 @@ import { motion } from "framer-motion";
 import chefImg from "../assets/login/chef-img.png";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
-
-
+import { useAuth } from "../context/AuthContext.jsx";
 
 export default function Login() {
   const navigate = useNavigate();
+  const { login } = useAuth(); // ✅ THIS WAS MISSING
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -16,51 +16,49 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
 
   const [showForgot, setShowForgot] = useState(false);
-const [forgotEmail, setForgotEmail] = useState("");
-const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
 
+  // 🔐 LOGIN
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
 
-  // 🔐 Submit with backend API
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include", // 🔥 cookie
+        body: JSON.stringify({ email, password }),
+      });
 
-  try {
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include", // 🔥 REQUIRED
-      body: JSON.stringify({ email, password }),
-    });
+      const data = await res.json();
 
-    const data = await res.json();
+      if (!res.ok) {
+        alert(data.message || "Login failed");
+        return;
+      }
 
-    if (!res.ok) {
-      alert(data.message || "Login failed");
-      return;
+      // ✅ VERY IMPORTANT
+      await login(); // 🔥 fetches /profile & updates AuthContext
+
+      // 🔁 Redirect by role
+      if (data.user.role === "admin") {
+        navigate("/admin/dashboard", { replace: true });
+      } else if (data.user.role === "delivery") {
+        navigate("/delivery/orders", { replace: true });
+      } else {
+        navigate("/", { replace: true });
+      }
+
+    } catch (err) {
+      alert("Server not reachable");
+    } finally {
+      setLoading(false);
     }
+  };
 
-    // 🔥 IMPORTANT: trigger profile refetch
-    window.dispatchEvent(new Event("authChanged"));
-
-    // 🔥 redirect by role
-    if (data.user.role === "admin") {
-      navigate("/admin/dashboard");
-    } else if (data.user.role === "delivery") {
-      navigate("/delivery/orders");
-    } else {
-      navigate("/");
-    }
-
-  } catch (err) {
-    alert("Server not reachable");
-  } finally {
-    setLoading(false);
-  }
-};
-
-
-  // 👉 trigger small pulse when typing
+  // typing animation
   useEffect(() => {
     if (typing) {
       const t = setTimeout(() => setTyping(false), 300);

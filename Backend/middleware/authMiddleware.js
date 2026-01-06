@@ -17,42 +17,36 @@ export const protect = async (req, res, next) => {
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: "Not authorized",
+        message: "Not authorized"
       });
     }
 
+    // ✅ 1. Verify JWT signature
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    let user;
+    // ✅ 2. Check Redis session
+    const session = await redis.get(`session:${token}`);
 
-    if (decoded.role === "admin") {
-      user = await Admin.findById(decoded.id);
-    } 
-    else if (decoded.role === "user") {
-      user = await User.findById(decoded.id);
-    } 
-    else if (decoded.role === "delivery") {
-      user = await DeliveryBoy.findById(decoded.id);
-    }
-
-    if (!user) {
+    if (!session) {
       return res.status(401).json({
         success: false,
-        message: "User not found",
+        message: "Session expired"
       });
     }
 
+    // ✅ 3. Attach user from Redis (FAST)
     req.user = {
-      id: user._id,
+      id: decoded.id,
       role: decoded.role,
-      data: user,
+      data: JSON.parse(session)
     };
 
     next();
   } catch (error) {
+    console.error("AUTH ERROR:", error);
     return res.status(401).json({
       success: false,
-      message: "Session expired",
+      message: "Not authorized"
     });
   }
 };

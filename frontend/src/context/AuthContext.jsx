@@ -1,79 +1,46 @@
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import axios from "axios";
-import { socket } from "../socket";
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [authReady, setAuthReady] = useState(false);
 
-  // ✅ ADD THIS LINE (YOU MISSED IT)
-  const socketInitialized = useRef(false);
-
-const fetchUser = async () => {
-  try {
-    const res = await axios.get(
-      "/api/auth/profile",
-      { withCredentials: true }
-    );
-    setUser(res.data.data);
-  } catch {
-    setUser(null);
-  } finally {
-    setLoading(false);
-  }
-};
-
+  const fetchUser = async () => {
+    try {
+      const res = await axios.get("/api/auth/profile", {
+        withCredentials: true
+      });
+      setUser(res.data.user);
+    } catch {
+      setUser(null);
+    } finally {
+      setAuthReady(true);
+    }
+  };
 
   useEffect(() => {
-    fetchUser();
+    fetchUser(); // 🔥 on refresh
   }, []);
 
-  // 🔌 SOCKET CONNECT (SAFE)
-  useEffect(() => {
-  if (loading) return;              // ⛔ wait for profile API
-  if (!user?.id || !user?.role) return;
-  if (socketInitialized.current) return;
-
-  socket.connect();
-
-  socket.emit("join", {
-    userId: user.id,
-    role: user.role,
-  });
-
-  socketInitialized.current = true;
-
-  console.log("✅ Socket initialized:", user.role, user.id);
-}, [user, loading]);
-
-
-  const login = (userData) => {
-    setUser(userData);
+  const login = async () => {
+    await fetchUser();
   };
 
   const logout = async () => {
-    await axios.post(
-      "/api/auth/logout",
-      {},
-      { withCredentials: true }
-    );
-
-    socket.disconnect();
-    socketInitialized.current = false;
+    await axios.post("/api/auth/logout", {}, { withCredentials: true });
     setUser(null);
-    localStorage.clear();
+    setAuthReady(true);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider
+      value={{ user, authReady, isAuthenticated: !!user, login, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );
 };
 
 export const useAuth = () => useContext(AuthContext);
-
-
-export default AuthContext;

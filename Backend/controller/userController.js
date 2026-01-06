@@ -14,6 +14,7 @@ import { generateToken } from "../utils/generateToken.js";
 import crypto from "crypto";
 import { autoRefund } from "../utils/autoRefund.js";
 import DeliveryBoy from "../model/deliveryBoySchema.js";
+import { redis } from "../config/redis.js";
 
 
 /* REGISTER */
@@ -212,6 +213,17 @@ export const loginUser = async (req, res) => {
     const token = generateToken(user._id, user.role);
 
     await  sendWelcomeBackEmail(user.email, user.name);
+
+    await redis.set(
+      `session:${token}`,
+      JSON.stringify({
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }),
+      { EX: 60 * 60 * 24 * 7 } // 7 days
+    );
 
     // ✅ STORE JWT IN COOKIE (7 DAYS)
    res.cookie("token", token, {
