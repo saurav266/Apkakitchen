@@ -31,7 +31,7 @@ export const registerUser = async (req, res) => {
       return res.status(400).json({ message: "User already exists" });
     }
 
-   // const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
     // 🔐 Create short-lived token (10 min)
@@ -39,7 +39,7 @@ export const registerUser = async (req, res) => {
       {
         name,
         email,
-        password,
+        password: hashedPassword,
         otp,
       },
       process.env.JWT_SECRET,
@@ -104,11 +104,11 @@ export const verifyOtpAndRegister = async (req, res) => {
 
 res.cookie("token", token, {
   httpOnly: true,
-  secure: false,           // ✅ MUST be false on localhost
-  sameSite: "lax",         // ✅ REQUIRED
+  secure: true,        // ✅ HTTPS only
+  sameSite: "none",    // ✅ required
+  path: "/",
   maxAge: 7 * 24 * 60 * 60 * 1000
 });
-
 return res.status(201).json({
   success: true,
   message: "Registration successful. Logged in automatically",
@@ -243,9 +243,9 @@ export const loginUser = async (req, res) => {
 export const logoutUser = (req, res) => {
   res.clearCookie("token", {
     httpOnly: true,
-    secure: false,
-    sameSite: "lax",
-    path: "/",     // 🔥 MUST MATCH LOGIN
+  secure: true,
+  sameSite: "none",
+  path: "/",    // 🔥 MUST MATCH LOGIN
   });
 
   return res.status(200).json({
