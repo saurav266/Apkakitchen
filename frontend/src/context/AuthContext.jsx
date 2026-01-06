@@ -11,19 +11,20 @@ export const AuthProvider = ({ children }) => {
   // ✅ ADD THIS LINE (YOU MISSED IT)
   const socketInitialized = useRef(false);
 
-  const fetchUser = async () => {
-    try {
-      const res = await axios.get(
-        "/api/auth/profile",
-        { withCredentials: true }
-      );
-      setUser(res.data.user);
-    } catch {
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  };
+const fetchUser = async () => {
+  try {
+    const res = await axios.get(
+      "/api/auth/profile",
+      { withCredentials: true }
+    );
+    setUser(res.data.data);
+  } catch {
+    setUser(null);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   useEffect(() => {
     fetchUser();
