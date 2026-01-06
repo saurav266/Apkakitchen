@@ -13,12 +13,13 @@ import { connectDB } from "./db/db.js";
 await connectDB();
 
 const app = express();
+app.set("trust proxy", 1); 
 const PORT = process.env.PORT || 3000;
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+const FRONTEND_URL = process.env.FRONTEND_URL ;
 
 // ===== MIDDLEWARE =====
 
-
+app.use(express.json());
 app.post(
   "/api/payment/webhook",
   express.raw({ type: "application/json" }),
@@ -32,7 +33,7 @@ app.use(
   })
 );
 app.use(compression());
-app.use(express.json());
+
 app.use(cookieParser());
 
 // ===== ROUTES =====
@@ -96,12 +97,12 @@ io.on("connection", (socket) => {
 
   // 📍 LIVE LOCATION FROM DELIVERY BOY
 socket.on("delivery:location:update", (data) => {
-  if (data.orderId === id) {
-    setLiveLocation({
-      lat: data.lat,
-      lng: data.lng
-    });
-  }
+  if (!data?.orderId) return;
+
+  io.to(`order_${data.orderId}`).emit(
+    "delivery:location:update",
+    data
+  );
 });
 
 
