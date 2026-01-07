@@ -9,19 +9,27 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true); // 🔥 IMPORTANT
   const socketInitialized = useRef(false);
 
+   /* ================= FETCH LOGGED-IN USER ================= */
   const fetchUser = async () => {
     try {
       const res = await axios.get("/api/auth/profile", {
         withCredentials: true
       });
+
+      // backend may send user or data
       setUser(res.data.user || res.data.data);
-    } catch {
+    } catch (err) {
+      // 401 = not logged in (NOT server error)
+      if (err?.response?.status !== 401) {
+        console.error("Auth fetch error:", err);
+      }
       setUser(null);
     } finally {
-      setLoading(false); // 🔥 AUTH IS NOW DECIDED
+      setLoading(false);
     }
   };
 
+  /* ================= INITIAL AUTH CHECK ================= */
   useEffect(() => {
     fetchUser();
   }, []);
@@ -29,27 +37,57 @@ export const AuthProvider = ({ children }) => {
   // 🔌 socket init AFTER auth resolved
   useEffect(() => {
     if (loading) return;
-    if (!user?.id || socketInitialized.current) return;
+    if (!user?.id) return;
+    if (socketInitialized.current) return;
 
     socket.connect();
-    socket.emit("join", { userId: user.id, role: user.role });
+    socket.emit("join", {
+      userId: user.id,
+      role: user.role
+    });
+
     socketInitialized.current = true;
   }, [user, loading]);
 
+  /* ================= LOGIN ================= */
+  /**
+   * IMPORTANT:
+   * We DO NOT call fetchUser() immediately after login.
+   * Browser attaches cookies on NEXT request.
+   * Reload guarantees cookie availability.
+   */
   const login = async () => {
     setLoading(true);
-    await fetchUser(); // 🔥 REFRESH SESSION AFTER LOGIN
+    window.location.reload(); // 🔥 FIXES FIRST-LOGIN ERROR
   };
-
+  /* ================= LOGOUT ================= */
   const logout = async () => {
-    await axios.post("/api/auth/logout", {}, { withCredentials: true });
+    try {
+      await axios.post(
+        "/api/auth/logout",
+        {},
+        { withCredentials: true }
+      );
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
+
     socket.disconnect();
     socketInitialized.current = false;
     setUser(null);
+    setLoading(false);
   };
 
+  /* ================= PROVIDER ================= */
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        login,
+        logout
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

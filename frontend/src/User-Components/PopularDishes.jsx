@@ -3,33 +3,54 @@ import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import axios from "axios";
 
-import biryaniImg from "../assets/hero-section/biryani.png";
-import noodlesImg from "../assets/hero-section/veg-noodles.png";
-import eggBiryaniImg from "../assets/hero-section/egg-biryani.png";
-import chholaComboImg from "../assets/hero-section/puri-chole.png";
-import chicken65Img from "../assets/hero-section/chicken65.png";
+import biryaniImg from "../assets/hero-section/biryani.png"
+import  chholaComboImg from "../assets/hero-section/puri-chole.png"
+const muttonchawal = "https://res.cloudinary.com/dupwee5cd/image/upload/v1767788014/mutton_chawal_top_xxnb0e.png";
+const  Chickenchili = "https://res.cloudinary.com/dupwee5cd/image/upload/v1767788893/cc_zzg4c5.png";
+const sahifirni = "https://res.cloudinary.com/dupwee5cd/image/upload/v1767787373/Pngtree_eid_phirni_20728036_hqhrfx.png";
 
 const API = "";
 /* 🔥 CONTROL POPULAR ITEMS BY NAME ONLY */
 const POPULAR_DISH_NAMES = [
-  "Egg Biryani",
-  "Veg Noodles",
+  "Mutton Chawal",
+  "Chicken Chilli With Bone",
   "Chicken Biryani",
-  "Chhola Poori Combo",
-  "Chicken 65",
+  "Puri-Chole",
+  "Sahi Firni",
 ];
 const DISH_NAME_TO_IMAGE = {
-  "Egg Biryani": eggBiryaniImg,
-  "Veg Noodles": noodlesImg,
+  "Chicken Chilli With Bone": Chickenchili,
+  "Mutton Chawal": muttonchawal,
   "Chicken Biryani": biryaniImg,
-  "Chhola Poori Combo": chholaComboImg,
-  "Chicken 65": chicken65Img,
+  "Puri-Chole": chholaComboImg,
+  "Sahi Firni": sahifirni,
 };
+
+const getDisplayVariant = (product) => {
+  if (!product?.variants?.length) {
+    return {
+      price: product.finalPrice ?? product.price ?? 0,
+      label: product.name,
+      variantId: null,
+    };
+  }
+
+  const variant =
+    product.variants.find(v => v.isDefault) || product.variants[0];
+
+  return {
+    price: variant.finalPrice ?? variant.price,
+    label: `${product.name} (${variant.name})`,
+    variantId: variant._id,
+  };
+};
+
 export default function PopularDishes() {
   const [dishes, setDishes] = useState([]);
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const intervalRef = useRef(null);
+
 
   /* 🔌 Fetch from backend */
   useEffect(() => {
@@ -82,40 +103,70 @@ export default function PopularDishes() {
   };
 
   const handleAddToCart = (dish) => {
-    let cart = JSON.parse(localStorage.getItem("cart")) || [];
-    const found = cart.find((i) => i._id === dish._id);
-    if (found) found.qty += 1;
-    else cart.push({ ...dish, qty: 1 });
-    localStorage.setItem("cart", JSON.stringify(cart));
-    window.dispatchEvent(new Event("cartUpdated"));
-  };
+  const display = getDisplayVariant(dish);
+
+  const cartItemId = display.variantId
+    ? `${dish._id}_${display.variantId}`
+    : dish._id;
+
+  let cart = JSON.parse(localStorage.getItem("cart")) || [];
+
+  const index = cart.findIndex(i => i.cartItemId === cartItemId);
+
+  if (index > -1) {
+    cart[index].qty += 1;
+  } else {
+    cart.push({
+      cartItemId,
+      productId: dish._id,
+      variantId: display.variantId,
+      name: display.label,
+      image: DISH_NAME_TO_IMAGE[dish.name] || dish.image,
+      price: display.price,
+      qty: 1,
+    });
+  }
+
+  localStorage.setItem("cart", JSON.stringify(cart));
+  window.dispatchEvent(new Event("cartUpdated"));
+};
+
 
   if (!dishes.length) return null;
 
   return (
-    <section className="py-28 bg-gradient-to-br from-orange-50 via-amber-50 to-red-50 overflow-hidden">
-      <div className="max-w-7xl mx-auto px-6 text-center">
+  <section className="py-28 bg-gradient-to-br from-orange-50 via-amber-50 to-red-50 overflow-hidden">
+    <div className="max-w-7xl mx-auto px-6 text-center">
 
-        <h2 className="text-4xl font-bold mb-16">
-          Customer <span className="text-orange-600">Favorites</span>
-        </h2>
+      <h2 className="text-4xl font-bold mb-16">
+        Customer <span className="text-orange-600">Favorites</span>
+      </h2>
 
-        <div
-          className="relative h-[440px] flex items-center justify-center"
-          onMouseEnter={() => setPaused(true)}
-          onMouseLeave={() => setPaused(false)}
+      <div
+        className="relative h-[440px] flex items-center justify-center"
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => setPaused(false)}
+      >
+        <div className="absolute w-72 h-16 bg-orange-400/40 blur-3xl rounded-full -bottom-4" />
+
+        <button
+          onClick={prev}
+          className="absolute left-0 md:left-10 z-20 w-12 h-12 rounded-full bg-white/70 backdrop-blur shadow"
         >
-          <div className="absolute w-72 h-16 bg-orange-400/40 blur-3xl rounded-full -bottom-4" />
+          <ChevronLeft className="w-6 h-6 text-orange-600" />
+        </button>
 
-          <button onClick={prev} className="absolute left-0 md:left-10 z-20 w-12 h-12 rounded-full bg-white/70 backdrop-blur shadow">
-            <ChevronLeft className="w-6 h-6 text-orange-600" />
-          </button>
+        <button
+          onClick={next}
+          className="absolute right-0 md:right-10 z-20 w-12 h-12 rounded-full bg-white/70 backdrop-blur shadow"
+        >
+          <ChevronRight className="w-6 h-6 text-orange-600" />
+        </button>
 
-          <button onClick={next} className="absolute right-0 md:right-10 z-20 w-12 h-12 rounded-full bg-white/70 backdrop-blur shadow">
-            <ChevronRight className="w-6 h-6 text-orange-600" />
-          </button>
+        {dishes.map((dish, i) => {
+          const display = getDisplayVariant(dish);
 
-          {dishes.map((dish, i) => (
+          return (
             <motion.div
               key={dish._id}
               variants={variants}
@@ -125,16 +176,16 @@ export default function PopularDishes() {
             >
               <img
                 src={DISH_NAME_TO_IMAGE[dish.name] || dish.image}
-                alt={dish.name}
+                alt={display.label}
                 className="h-40 object-contain drop-shadow-2xl scale-135"
               />
 
-              <div>
+              <div className="text-center">
                 <h3 className="text-xl font-semibold text-gray-800">
-                  {dish.name}
+                  {display.label}
                 </h3>
                 <p className="text-orange-600 font-bold text-lg">
-                  ₹{dish.finalPrice}
+                  ₹{display.price}
                 </p>
               </div>
 
@@ -145,22 +196,25 @@ export default function PopularDishes() {
                 Add to Cart
               </button>
             </motion.div>
-          ))}
-        </div>
-
-        <div className="flex justify-center gap-3 mt-12">
-          {dishes.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setIndex(i)}
-              className={`w-3 h-3 rounded-full ${
-                i === index ? "bg-orange-600 scale-125" : "bg-gray-300"
-              }`}
-            />
-          ))}
-        </div>
+          );
+        })}
 
       </div>
-    </section>
-  );
+
+      {/* ✅ PAGINATION DOTS */}
+      <div className="flex justify-center gap-3 mt-12">
+        {dishes.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setIndex(i)}
+            className={`w-3 h-3 rounded-full ${
+              i === index ? "bg-orange-600 scale-125" : "bg-gray-300"
+            }`}
+          />
+        ))}
+      </div>
+
+    </div>
+  </section>
+)
 }

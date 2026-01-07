@@ -86,7 +86,7 @@ export const loginAdmin = async (req, res) => {
 
     // ✅ STORE TOKEN IN COOKIE (CRITICAL)
     await redis.set(
-  `session:${token}`,
+  `auth:${token}`,
   JSON.stringify({
     id: admin._id,
     role: admin.role,

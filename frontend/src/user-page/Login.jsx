@@ -45,7 +45,7 @@ export default function Login() {
 
       // 🔁 Redirect by role
 
-      await syncCartOnLogin();
+     
       
       if (data.user.role === "admin") {
         navigate("/admin/dashboard", { replace: true });
@@ -55,8 +55,15 @@ export default function Login() {
         navigate("/", { replace: true });
       }
 
+       await syncCartOnLogin();
+
+       
+       setTimeout(() => {
+      login(); // safe now
+    }, 0);
     } catch (err) {
-      alert("Server not reachable");
+       console.error("Login error:", err);
+    alert("Unable to reach server");
     } finally {
       setLoading(false);
     }

@@ -299,7 +299,7 @@ console.log("🚚 loginDeliveryBoy HIT");
     );
 
      await redis.set(
-      `session:${token}`,
+      `auth:${token}`,
       JSON.stringify({
         id: deliveryBoy._id,
         role: deliveryBoy.role,
@@ -352,17 +352,18 @@ console.log("🚚 loginDeliveryBoy HIT");
  */
 export const logoutDeliveryBoy = async (req, res) => {
   try {
-    
-  if (token) {
-    await redis.del(`session:${token}`);
-  }
+    const token = req.cookies?.token; // ✅ FIX
 
-  res.clearCookie("token", {
-    httpOnly: true,
-    secure: true,
-    sameSite: "none",
-    path: "/"
-  });
+    if (token) {
+      await redis.del(`auth:${token}`); // ✅ MATCH KEY
+    }
+
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      path: "/"
+    });
 
     return res.json({
       success: true,

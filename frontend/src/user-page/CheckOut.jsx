@@ -18,6 +18,8 @@ const loadRazorpay = () => {
     document.body.appendChild(script);
   });
 };
+const getPrice = (item) =>
+  Number(item.finalPrice ?? item.price ?? 0);
 export default function Checkout() {
   const navigate = useNavigate();
 
@@ -39,9 +41,20 @@ export default function Checkout() {
   const [selectedSavedId, setSelectedSavedId] = useState("");
 
   useEffect(() => {
-    const c = JSON.parse(localStorage.getItem("cart")) || [];
-    if (c.length === 0) navigate("/cart");
-    setCart(c);
+   const raw = JSON.parse(localStorage.getItem("cart")) || [];
+
+if (raw.length === 0) {
+  navigate("/cart");
+  return;
+}
+
+const normalized = raw.map(item => ({
+  ...item,
+  qty: Number(item.qty ?? 1),
+  finalPrice: Number(item.finalPrice ?? item.price ?? 0),
+}));
+
+setCart(normalized);
 
     const user = JSON.parse(localStorage.getItem("user"));
     if (user?.name) setName(user.name);
@@ -141,7 +154,7 @@ setPincode(addr.postcode || "");
 
 
 
-  const subtotal = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
+  const subtotal = cart.reduce((sum, i) => sum + i.finalPrice * i.qty, 0);
   const delivery = subtotal > 0 ? 40 : 0;
   const total = subtotal + delivery;
 
@@ -166,7 +179,7 @@ const placeOrder = async () => {
             productId: i._id,
             name: i.name,
             quantity: i.qty,
-            price: i.price
+            price: i.finalPrice
           })),
           totalAmount: total,
           paymentMethod: "COD",
@@ -499,12 +512,12 @@ rzp.open();
                   <div>
                     <p className="font-medium">{item.name}</p>
                     <p className="text-sm text-gray-500">
-                      ₹{item.price} × {item.qty}
+                      ₹{item.finalPrice} × {item.qty}
                     </p>
                   </div>
                 </div>
                 <p className="font-semibold">
-                  ₹{item.price * item.qty}
+                  ₹{item.finalPrice * item.qty}
                 </p>
               </div>
             ))}

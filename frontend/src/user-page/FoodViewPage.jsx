@@ -13,7 +13,28 @@ import Reviews from "../User-Components/ReviewSection.jsx";
 import { addItemToCart } from "../utils/cart.js"
 
 const API = "";
-const AUTO_SLIDE_INTERVAL = 4000; // 4 sec
+const AUTO_SLIDE_INTERVAL = 3000; // 4 sec
+const getDisplayVariant = (product) => {
+  // NO VARIANTS
+  if (!product?.variants?.length) {
+    return {
+      price: product.finalPrice ?? product.price ?? 0,
+      label: product.name,
+      variantId: null,
+    };
+  }
+
+  // HAS VARIANTS → take default OR first
+  const variant =
+    product.variants.find((v) => v.isDefault) || product.variants[0];
+
+  return {
+    price: variant.finalPrice ?? variant.price,
+    label: `${product.name} (${variant.name})`,
+    variantId: variant._id,
+  };
+};
+
 
 export default function FoodViewPage() {
   const { id } = useParams();
@@ -29,6 +50,20 @@ export default function FoodViewPage() {
 
   const startX = useRef(0);
   const sliderRef = useRef(null);
+
+  useEffect(() => {
+  // reset quantity and variant when product changes
+  setQty(1);
+
+  if (food?.variants?.length) {
+    const def =
+      food.variants.find((v) => v.isDefault) || food.variants[0];
+    setSelectedVariant(def);
+  } else {
+    setSelectedVariant(null);
+  }
+}, [id]);
+
 
   /* ================= FETCH PRODUCT + RELATED ================= */
   useEffect(() => {
@@ -111,9 +146,8 @@ useEffect(() => {
   const isCombo = food.category === "party-combo";
   const isVeg = food.foodType === "veg";
 
-  const displayPrice = hasVariants
-  ? Number(selectedVariant?.finalPrice ?? selectedVariant?.price)
-  : Number(food.finalPrice ?? food.price);
+  const display = getDisplayVariant(food);
+
 
 
 
@@ -326,7 +360,7 @@ const addToCart = () => {
             )}
 
             <p className="text-3xl font-bold text-orange-600 mb-6">
-              ₹{hasVariants ? getEffectivePrice() : food.finalPrice ?? food.price}
+              ₹{(hasVariants ? getEffectivePrice() : food.finalPrice ?? food.price) * qty}
             </p>
 
             {/* QTY */}
@@ -379,28 +413,36 @@ const addToCart = () => {
           </h3>
 
           <div className="flex gap-6 overflow-x-auto pb-4">
-            {related.map((f) => (
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                key={f._id}
-                onClick={() => navigate(`/food/${f._id}`)}
-                className="min-w-[200px] bg-white rounded-2xl shadow-lg p-4 cursor-pointer"
-              >
-                <img
-                  src={
-                    f.images?.find((i) => i.isPrimary)?.url ||
-                    f.images?.[0]?.url ||
-                    f.image
-                  }
-                  alt={f.name}
-                  className="h-32 w-full object-contain mb-3"
-                />
-                <p className="font-semibold">{f.name}</p>
-                <p className="text-orange-600 font-bold">
-                  ₹{f.finalPrice || f.price}
-                </p>
-              </motion.div>
-            ))}
+            {related.map((f) => {
+              const d = getDisplayVariant(f);
+
+              return (
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  key={f._id}
+                  onClick={() => navigate(`/food/${f._id}`)}
+                  className="min-w-[200px] bg-white rounded-2xl shadow-lg p-4 cursor-pointer"
+                >
+                  <img
+                    src={
+                      f.images?.find((i) => i.isPrimary)?.url ||
+                      f.images?.[0]?.url ||
+                      f.image
+                    }
+                    alt={d.label}
+                    className="h-32 w-full object-contain mb-3"
+                  />
+
+                  {/* ✅ NAME WITH VARIANT */}
+                  <p className="font-semibold">{d.label}</p>
+
+                  {/* ✅ CORRECT PRICE */}
+                  <p className="text-orange-600 font-bold">
+                    ₹{d.price}
+                  </p>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </div>
