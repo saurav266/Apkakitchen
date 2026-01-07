@@ -102,6 +102,17 @@ export const verifyOtpAndRegister = async (req, res) => {
 
     // 🔥 AUTO LOGIN (JWT)
    const token = generateToken(user._id, user.role);
+   // 🔥 STORE SESSION IN REDIS (MISSING PART)
+await redis.set(
+  `auth:${token}`,
+  JSON.stringify({
+    id: user._id,
+    name: user.name,
+    email: user.email,
+    role: user.role
+  }),
+  { EX: 60 * 60 * 24 * 7 } // 7 days
+);
 
 res.cookie("token", token, {
   httpOnly: true,
@@ -215,7 +226,7 @@ export const loginUser = async (req, res) => {
     await  sendWelcomeBackEmail(user.email, user.name);
 
     await redis.set(
-      `session:${token}`,
+      `auth:${token}`,
       JSON.stringify({
         id: user._id,
         name: user.name,
@@ -256,7 +267,7 @@ export const logoutUser = async (req, res) => {
   const token = req.cookies?.token;
 
   if (token) {
-    await redis.del(`session:${token}`);
+    await redis.del(`auth:${token}`);
   }
 
   res.clearCookie("token", {

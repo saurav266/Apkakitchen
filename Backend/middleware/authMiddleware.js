@@ -26,7 +26,7 @@ export const protect = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // 2️⃣ Check Redis session
-    const session = await redis.get(`session:${token}`);
+    const session = await redis.get(`auth:${token}`);
     if (!session) {
       return res.status(401).json({
         success: false,
