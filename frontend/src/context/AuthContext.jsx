@@ -6,88 +6,48 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); // 🔥 IMPORTANT
+  const [loading, setLoading] = useState(true);
   const socketInitialized = useRef(false);
 
-   /* ================= FETCH LOGGED-IN USER ================= */
   const fetchUser = async () => {
     try {
       const res = await axios.get("/api/auth/profile", {
         withCredentials: true
       });
-
-      // backend may send user or data
       setUser(res.data.user || res.data.data);
-    } catch (err) {
-      // 401 = not logged in (NOT server error)
-      if (err?.response?.status !== 401) {
-        console.error("Auth fetch error:", err);
-      }
+    } catch {
       setUser(null);
     } finally {
       setLoading(false);
     }
   };
 
-  /* ================= INITIAL AUTH CHECK ================= */
   useEffect(() => {
     fetchUser();
   }, []);
 
-  // 🔌 socket init AFTER auth resolved
   useEffect(() => {
-    if (loading) return;
-    if (!user?.id) return;
-    if (socketInitialized.current) return;
+    if (loading || !user?.id || socketInitialized.current) return;
 
     socket.connect();
-    socket.emit("join", {
-      userId: user.id,
-      role: user.role
-    });
-
+    socket.emit("join", { userId: user.id, role: user.role });
     socketInitialized.current = true;
   }, [user, loading]);
 
-  /* ================= LOGIN ================= */
-  /**
-   * IMPORTANT:
-   * We DO NOT call fetchUser() immediately after login.
-   * Browser attaches cookies on NEXT request.
-   * Reload guarantees cookie availability.
-   */
   const login = async () => {
     setLoading(true);
-    window.location.reload(); // 🔥 FIXES FIRST-LOGIN ERROR
+    await fetchUser();   // ✅ ONLY THIS
   };
-  /* ================= LOGOUT ================= */
-  const logout = async () => {
-    try {
-      await axios.post(
-        "/api/auth/logout",
-        {},
-        { withCredentials: true }
-      );
-    } catch (err) {
-      console.error("Logout error:", err);
-    }
 
+  const logout = async () => {
+    await axios.post("/api/auth/logout", {}, { withCredentials: true });
     socket.disconnect();
     socketInitialized.current = false;
     setUser(null);
-    setLoading(false);
   };
 
-  /* ================= PROVIDER ================= */
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        login,
-        logout
-      }}
-    >
+    <AuthContext.Provider value={{ user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

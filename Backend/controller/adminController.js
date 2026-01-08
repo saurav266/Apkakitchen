@@ -848,7 +848,7 @@ export const getAdminDashboard = async (req, res) => {
     });
 
     /* ================= PAYMENT SPLIT ================= */
-    const paymentSplit = { cod: 0, online: 0 };
+    const paymentSplit = { cod: 0, Online: 0 };
 
     orders.forEach(o => {
       if (o.orderStatus !== "delivered") return;
@@ -857,7 +857,7 @@ export const getAdminDashboard = async (req, res) => {
         paymentSplit.cod += o.totalAmount;
       }
       if (o.paymentMethod === "Online" && o.paymentStatus === "paid") {
-        paymentSplit.online += o.totalAmount;
+        paymentSplit.Online += o.totalAmount;
       }
     });
 

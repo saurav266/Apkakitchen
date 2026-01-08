@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { getLocalCart, setLocalCart } from "../utils/cart";
-
+import axios from "axios";
 export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth(); // ✅ THIS WAS MISSING
@@ -58,9 +58,7 @@ export default function Login() {
        await syncCartOnLogin();
 
        
-       setTimeout(() => {
-      login(); // safe now
-    }, 0);
+    
     } catch (err) {
        console.error("Login error:", err);
     alert("Unable to reach server");

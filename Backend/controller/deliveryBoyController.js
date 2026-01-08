@@ -39,7 +39,7 @@ const fixPassword = async () => {
   console.log("Password reset successfully");
 };
 
-fixPassword();
+//fixPassword();
 export const addDeliveryBoy = async (req, res) => {
   try {
     const {
@@ -70,7 +70,7 @@ export const addDeliveryBoy = async (req, res) => {
       });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    //const hashedPassword = await bcrypt.hash(password, 10);
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
     // 🔐 OTP TOKEN (10 MIN)
@@ -78,7 +78,7 @@ export const addDeliveryBoy = async (req, res) => {
       {
         name,
         email,
-        password: hashedPassword,
+        password,
         phone,
         aadhaarLast4,
         aadhaarNumber,
@@ -217,7 +217,7 @@ export const deliverOrderWithoutOtp = async (req, res) => {
     }
 
     // 🚫 Safety: block online payments
-    if (order.paymentMethod === "online") {
+    if (order.paymentMethod === "Online") {
       return res.status(400).json({
         message: "OTP delivery required for online payment"
       });
