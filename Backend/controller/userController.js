@@ -32,7 +32,7 @@ export const registerUser = async (req, res) => {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    //const hashedPassword = await bcrypt.hash(password, 10);
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
     // 🔐 Create short-lived token (10 min)
@@ -40,7 +40,7 @@ export const registerUser = async (req, res) => {
       {
         name,
         email,
-        password: hashedPassword,
+        password,
         otp,
       },
       process.env.JWT_SECRET,
