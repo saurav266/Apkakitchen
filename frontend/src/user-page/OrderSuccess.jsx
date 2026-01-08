@@ -35,21 +35,21 @@ export default function OrderSuccess() {
           Your food is being freshly prepared with love ❤️
         </p>
 
-        {/* Order Info */}
+        {/* Order Info
         <div className="bg-orange-50 rounded-2xl p-4 mb-8">
           <p className="text-sm text-gray-500">Order ID</p>
           <p className="text-lg font-semibold text-orange-600 tracking-wide">
-            #APKA12345
+            
           </p>
-        </div>
+        </div> */}
 
         {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
-            to="/my-orders"
+            to="/order"
             className="bg-gradient-to-r from-orange-600 to-red-600 text-white px-6 py-3 rounded-xl shadow-lg hover:scale-105 transition-transform duration-300 text-center"
           >
-            🍽️ Track Your Order
+            🍽️ Back to Your Order
           </Link>
 
           <Link

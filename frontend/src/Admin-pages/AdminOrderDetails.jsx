@@ -136,6 +136,9 @@ export default function AdminOrderDetails() {
         <p>Name: {order.customerName}</p>
         <p>Phone: {order.customerPhone}</p>
         <p>Payment: {order.paymentMethod}</p>
+        <p>Address: {order.customerAddress}</p>
+        <p>Ordered On: {new Date(order.createdAt).toLocaleString()}</p>
+        <p>Total: ₹{order.totalAmount}</p>
       </div>
 
       {/* CANCEL DETAILS */}

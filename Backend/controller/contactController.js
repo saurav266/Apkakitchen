@@ -24,7 +24,7 @@ export const sendContactMail = async (req, res) => {
 
     /* 📩 Admin Mail */
     await transporter.sendMail({
-      from: `"Apna Kitchen" <${process.env.MAIL_USER}>`,
+      from: `"Apka Kitchen" <${process.env.MAIL_USER}>`,
       to: process.env.MAIL_USER,
       replyTo: email,
       subject: `📩 New Contact Message from ${name}`,
@@ -57,9 +57,9 @@ export const sendContactMail = async (req, res) => {
       const logoUrl = `${process.env.PUBLIC_URL}/assets/logo.png`;
 
       await transporter.sendMail({
-        from: `"Apna Kitchen" <${process.env.MAIL_USER}>`,
+        from: `"Apka Kitchen" <${process.env.MAIL_USER}>`,
         to: email,
-        subject: "Thanks for contacting Apna Kitchen! 🍛",
+        subject: "Thanks for contacting Apka Kitchen! 🍛",
         html: `
         <div style="margin:0;padding:0;background:#fff7ed;font-family:Arial,sans-serif;">
           <table width="100%" cellpadding="0" cellspacing="0"
