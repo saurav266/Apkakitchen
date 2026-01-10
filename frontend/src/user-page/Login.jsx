@@ -55,7 +55,11 @@ export default function Login() {
         navigate("/", { replace: true });
       }
 
-       await syncCartOnLogin();
+  try {
+    await syncCartOnLogin();
+  } catch (cartErr) {
+    console.warn("Cart sync failed", cartErr);
+  }
 
        
     
@@ -149,7 +153,7 @@ export default function Login() {
           className="relative z-10 bg-white/90 backdrop-blur rounded-3xl shadow-2xl px-8 py-12 md:px-12"
         >
           <h2 className="text-3xl font-bold text-gray-800 mb-2">
-            Login to <span className="text-orange-600">Apna Kitchen</span>
+            Login to <span className="text-orange-600">Apka Kitchen</span>
           </h2>
           <p className="text-gray-500 mb-8">
             Enter your details to continue
